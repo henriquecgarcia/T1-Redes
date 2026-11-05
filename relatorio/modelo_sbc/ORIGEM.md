@@ -16,12 +16,13 @@ Os arquivos foram obtidos da distribuição do SBGames, evento da SBC:
 - https://www.sbgames.org/arquivos/Template_SBC/template-latex/sbc-template.sty
 - https://www.sbgames.org/arquivos/Template_SBC/template-latex/sbc.bst
 
-`SBC-template.sty` e `sbc.bst` não foram editados ou reformatados. Os nomes reais
-são `sbc-template.sty` e `sbc.bst`; seus hashes estão em `SHA256SUMS`.
+`sbc-template.sty` e `sbc.bst` não foram editados ou reformatados.
+Seus hashes estão em `SHA256SUMS`.
 O template no Overleaf é atribuído à Sociedade Brasileira de Computação e
 indica licença CC BY 4.0. Os avisos de autoria dos arquivos foram preservados.
 
 O modelo pede abstract em inglês e resumo em português para artigos em
 português. Ele não define um campo de palavras-chave, por isso esse campo não
-foi criado manualmente. Não foi encontrado enunciado ou arquivo de instruções
-do professor que acrescente exigências de formatação.
+foi criado manualmente. O enunciado `materiais/trabalho-1-sockets-26.pdf` foi conferido após ser
+adicionado ao repositório. Ele identifica ICT/UNIFESP e não exige um modelo
+de relatório em LaTeX. A adoção do SBC atende à orientação direta do usuário.
