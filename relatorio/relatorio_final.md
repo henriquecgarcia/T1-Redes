@@ -279,6 +279,13 @@ Para objetos grandes, aumentar a concorrência de quatro para oito clientes elev
 com pouco ganho agregado. A análise usa rodadas para estimar incerteza. Fontes, dados e evidências
 estão organizados para reprodução, conforme as instruções dos READMEs.
 
+# Nota sobre o uso de inteligência artificial
+
+Foi utilizada inteligência artificial (IA) para auxiliar na geração de
+alguns arquivos de automação, como Makefiles e scripts `.sh`.
+A IA também foi utilizada no preenchimento automático de código
+(*autocomplete*) e na execução de testes de grande volume no sistema.
+
 # Referências
 
 - Eddy, W. (2022). Transmission Control Protocol (TCP). RFC 9293. [RFC Editor](https://www.rfc-editor.org/rfc/rfc9293).
