@@ -1,20 +1,15 @@
 \documentclass[12pt]{article}
 
+% Estilo oficial SBC: papel, margens, fontes, títulos e legendas.
 \usepackage{sbc-template}
 \usepackage{graphicx,url}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage[brazil]{babel}
-\usepackage{amsmath,amssymb}
-\usepackage{booktabs,longtable,array,calc}
-\usepackage{listings}
+\usepackage{amsmath,amssymb,booktabs}
 \usepackage[hidelinks]{hyperref}
 
-\lstset{basicstyle=\ttfamily,breaklines=true,columns=fullflexible}
-\providecommand{\tightlist}{}
-\providecommand{\passthrough}[1]{#1}
 \sloppy
-
 \title{Transferência de arquivos via TCP e avaliação de desempenho no emulador CORE}
 \input{autores}
 
@@ -41,647 +36,352 @@
 	enquanto o tempo de resposta aumentou com a concorrência.
 \end{resumo}
 
-\hypertarget{introduuxe7uxe3o}{%
-\section{Introdução}\label{introduuxe7uxe3o}}
+% ==========================================================
+% 1. INTRODUÇÃO
+% ==========================================================
 
-Este trabalho implementa transferências binárias sobre TCP \cite{tcp} em C/Linux e investiga como
-tamanho de arquivo, concorrência e perfil de rede afetam o tempo de resposta e a vazão útil. A Parte
-1 compreende cliente, servidor e testes de correção; a Parte 2 compreende topologia CORE, validação,
-experimento, telemetria e análise estatística. Os artefatos estão separados em
-\passthrough{\lstinline!parte1/!} e \passthrough{\lstinline!parte2/!}.
+\section{Introdução}
+\label{sec:introducao}
 
-A coleta principal foi concluída: \textbf{528 rodadas, 48 configurações, 11 repetições por
-configuração e 2288 transferências}, todas com status de sucesso e SHA-256 correspondente. O piloto
-adicional contém quatro rodadas e 16 transferências e é analisado separadamente. O intervalo
-registrado da campanha principal foi de 2026-11-05T17:05:21Z a 2026-11-05T17:22:04Z, em UTC. Não se
-produziram itens da Parte 3.
+TCP oferece um fluxo confiável de bytes, mas não preserva os limites das
+mensagens da aplicação \cite{tcp}. Um serviço de transferência precisa,
+portanto, definir comandos, tamanho do conteúdo e critérios de conclusão.
+Também precisa tratar operações parciais de socket e impedir que falhas de
+uma conexão comprometam os demais clientes.
 
-\hypertarget{parte-1-implementauxe7uxe3o-e-auditoria}{%
-\section{Parte 1: implementação e auditoria}\label{parte-1-implementauxe7uxe3o-e-auditoria}}
+Este trabalho reúne duas etapas: a implementação de um cliente e servidor
+em C/Linux, com atendimento concorrente via OpenMP, e uma avaliação de GET e
+PUT no emulador CORE. O objetivo é observar o efeito conjunto do tamanho de
+arquivo, da concorrência e de dois perfis de rede sobre o tempo de resposta
+e a vazão útil. A avaliação utiliza processos reais nos nós emulados e
+verificação de integridade para cada transferência.
 
-\hypertarget{base-funcional-e-preservauxe7uxe3o}{%
-\subsection{Base funcional e preservação}\label{base-funcional-e-preservauxe7uxe3o}}
+% ==========================================================
+% 2. IMPLEMENTAÇÃO DO CLIENTE-SERVIDOR
+% ==========================================================
 
-Conforme a orientação do usuário, a referência funcional é \passthrough{\lstinline!tcp\_client.c!} e
-\passthrough{\lstinline!tcp\_server.c!}, originalmente em
-\passthrough{\lstinline!1\_TCPTrasmission/client/!} e
-\passthrough{\lstinline!1\_TCPTrasmission/server/!}. Os arquivos chamados
-\passthrough{\lstinline!tcp.c!} não são a base funcional e não são necessários para a entrega. Os
-originais restantes foram organizados em
-\passthrough{\lstinline!parte1/originais/1\_TCPTrasmission/!}, sem alteração de conteúdo. Os hashes
-dos fontes funcionais estão preservados nas evidências da Parte 1.
+\section{Implementação do cliente-servidor}
+\label{sec:implementacao}
 
-As versões finais encontram-se em \passthrough{\lstinline!parte1/src/tcp\_client.c!},
-\passthrough{\lstinline!tcp\_server.c!} e \passthrough{\lstinline!protocol.h!}. A auditoria
-considerou o escopo fornecido pelo usuário; um PDF adicional do enunciado não foi disponibilizado. O
-cliente final usa argumentos de linha de comando para permitir automação; os originais interativos
-foram preservados.
+A referência funcional foi o par de fontes \texttt{tcp\_client.c} e
+\texttt{tcp\_server.c}. A auditoria identificou um contador de clientes
+acessado sem sincronização, truncamento do destino antes do fim de PUT,
+interferência entre gravações do mesmo nome e uma resposta de echo sem a
+quebra de linha esperada. Os originais foram preservados; a versão revisada
+mantém os comandos e corrige essas situações.
 
-\begin{longtable}[]{@{}ll@{}}
-\toprule
-\begin{minipage}[b]{0.47\columnwidth}\raggedright
-Problema na referência funcional\strut
-\end{minipage} & \begin{minipage}[b]{0.47\columnwidth}\raggedright
-Correção final\strut
-\end{minipage}\tabularnewline
-\midrule
-\endhead
-\begin{minipage}[t]{0.47\columnwidth}\raggedright
-Contador de clientes sem sincronização\strut
-\end{minipage} & \begin{minipage}[t]{0.47\columnwidth}\raggedright
-Oito trabalhadores OpenMP dedicados, sem contador compartilhado\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.47\columnwidth}\raggedright
-Upload truncava o destino antes de terminar\strut
-\end{minipage} & \begin{minipage}[t]{0.47\columnwidth}\raggedright
-Temporário exclusivo e rename atômico após fechamento bem-sucedido\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.47\columnwidth}\raggedright
-PUTs para o mesmo nome interferiam entre si\strut
-\end{minipage} & \begin{minipage}[t]{0.47\columnwidth}\raggedright
-Cada transferência usa seu temporário; última publicação concluída vence\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.47\columnwidth}\raggedright
-GET podia observar conteúdo em escrita\strut
-\end{minipage} & \begin{minipage}[t]{0.47\columnwidth}\raggedright
-Descritor mantém a versão publicada; PUT troca o inode ao concluir\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.47\columnwidth}\raggedright
-Echo sem LF bloqueava a leitura esperada\strut
-\end{minipage} & \begin{minipage}[t]{0.47\columnwidth}\raggedright
-Echo inclui a quebra de linha\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.47\columnwidth}\raggedright
-Erros podiam resultar em saída de sucesso\strut
-\end{minipage} & \begin{minipage}[t]{0.47\columnwidth}\raggedright
-Status JSON de erro e código de retorno não zero\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.47\columnwidth}\raggedright
-Validações de nome divergentes\strut
-\end{minipage} & \begin{minipage}[t]{0.47\columnwidth}\raggedright
-Rotinas compartilhadas de validação e enquadramento\strut
-\end{minipage}\tabularnewline
-\begin{minipage}[t]{0.47\columnwidth}\raggedright
-Falta de limites de espera\strut
-\end{minipage} & \begin{minipage}[t]{0.47\columnwidth}\raggedright
-Timeouts de socket e conexão, mais watchdog do executor\strut
-\end{minipage}\tabularnewline
-\bottomrule
-\end{longtable}
+\subsection{Protocolo e tratamento de erros}
 
-\hypertarget{contrato-tcp-e-arquivos-binuxe1rios}{%
-\subsection{Contrato TCP e arquivos binários}\label{contrato-tcp-e-arquivos-binuxe1rios}}
+Os comandos são linhas ASCII encerradas por LF. GET envia o nome remoto;
+o servidor responde com \texttt{OK tamanho} e exatamente a quantidade
+anunciada de bytes, ou com uma linha \texttt{ERR}. PUT envia nome e tamanho,
+aguarda \texttt{READY}, transmite o corpo e aguarda \texttt{OK}. O corpo
+pode conter qualquer byte, inclusive NUL e LF. O limite é 1 GiB por arquivo;
+nomes remotos são simples, sem caminhos ou espaços.
 
-Cada comando é uma linha ASCII encerrada em LF; o corpo contém exatamente o tamanho anunciado,
-podendo incluir qualquer byte. Nomes remotos simples têm até 255 caracteres e aceitam letras ASCII,
-dígitos, ponto, hífen e sublinhado, exceto ponto e dois pontos consecutivos isolados. Caminhos,
-espaços, CR e NUL não são aceitos. Tamanhos usam somente dígitos decimais, sem sinal, até 1 GiB.
+As rotinas de comunicação repetem \texttt{send} e \texttt{recv} até completar
+o tamanho esperado e tratam interrupções EINTR. A leitura do cabeçalho não
+consome o corpo seguinte. O uso de MSG\_NOSIGNAL evita terminar o servidor
+por SIGPIPE quando um cliente desconecta. Erros que comprometem o
+enquadramento encerram a conexão; o cliente retorna status não zero quando
+a operação falha. Há timeout de 15 segundos por espera de socket e limite
+para estabelecer a conexão.
 
-\begin{lstlisting}
-GET nome.bin\n
-<- OK tamanho\n + exatamente tamanho bytes
-	ou ERR motivo\n
+\subsection{Concorrência e sobrescrita}
 
-PUT nome.bin tamanho\n
-<- READY\n
--> exatamente tamanho bytes
-<- OK\n ou ERR motivo\n
-\end{lstlisting}
+O OpenMP \cite{openmp} mantém oito trabalhadores em uma região paralela,
+com ajuste dinâmico desativado. Cada trabalhador aceita e
+atende uma conexão por vez, sem contador compartilhado. Conexões adicionais
+podem aguardar no backlog, sujeito aos limites do kernel.
 
-Uma conexão admite comandos sucessivos, inclusive quando cabeçalhos e payloads chegam juntos. QUIT
-encerra a conexão. GET/PUT malformados recebem ERR; outros textos recebem echo com LF. Se uma falha
-comprometer o enquadramento, a conexão é encerrada. O cliente automatizado executa uma operação por
-processo e recebe IPv4, porta, operação, nome remoto e caminho local.
+PUT grava em um temporário exclusivo no diretório de armazenamento. Após
+fechamento bem-sucedido, \texttt{rename} publica o arquivo completo,
+substituindo o destino existente. Em PUTs concorrentes para o mesmo nome,
+a última publicação concluída vence. GET mantém o descritor da versão que
+abriu; o cliente também grava o download em temporário antes de substituir
+o destino local. Assim, uma transferência interrompida preserva a versão
+anterior. A publicação é atômica durante a execução normal, sem garantia de
+durabilidade após queda de energia, pois não se usa fsync em arquivo e diretório.
 
-\noindent\passthrough{\lstinline!send\_all!} e \passthrough{\lstinline!recv\_exact!} repetem operações
-parciais e EINTR. \passthrough{\lstinline!MSG\_NOSIGNAL!} evita terminar o processo por SIGPIPE. A
-leitura da linha não consome os bytes seguintes do arquivo. GET transmite somente o tamanho
-anunciado. Resultados de leitura, escrita e fechamento são verificados. GET rejeita symlinks e
-arquivos não regulares; PUT substitui o nome de destino sem seguir um eventual symlink.
+\subsection{Verificação da implementação}
 
-\hypertarget{openmp-sobrescrita-e-falhas}{%
-\subsection{OpenMP, sobrescrita e falhas}\label{openmp-sobrescrita-e-falhas}}
+A compilação usa GCC, C11, OpenMP e avisos tratados como erros. Passaram
+11 testes de integração normais e os mesmos 11 com interposição de sockets,
+forçando envios de até 4093 bytes, recebimentos de até 257 bytes e EINTR
+periódico. A suíte cobre arquivos de 0 bytes a 4 MiB, GET/PUT, SHA-256,
+sobrescrita, cabeçalhos fragmentados, comandos encadeados, desconexões,
+download truncado, sintaxe inválida, arquivos não regulares e timeout ocioso.
 
-Oito trabalhadores OpenMP \cite{openmp} executam accept e atendimento independentemente, com ajuste
-dinâmico desativado. Cada um atende uma conexão por vez. Conexões adicionais podem aguardar no
-backlog de 128, sujeito ao kernel. Essa organização remove a corrida do contador e evita que o laço
-bloqueante de aceitação seja executado em um ponto de escalonamento de tarefas.
+A simultaneidade foi verificada obtendo oito respostas READY antes de
+enviar qualquer corpo. Também foram testados oito PUTs para o mesmo nome e
+GET durante um PUT. As verificações da revisão usam novos diretórios de
+saída, preservando os logs da execução original.
 
-PUT grava um temporário criado por mkstemp no diretório de armazenamento. Após fclose bem-sucedido,
-rename publica o arquivo completo e substitui o existente, inclusive por arquivo vazio. GET usa um
-descritor da versão aberta, e o cliente grava o download em temporário antes de substituir seu
-destino. Uma transferência interrompida preserva a versão anterior. Não há garantia de durabilidade
-após queda de energia: o protocolo não executa fsync no arquivo e no diretório. Alterações externas
-diretas no conteúdo publicado ficam fora do contrato.
+% ==========================================================
+% 3. AMBIENTE EXPERIMENTAL
+% ==========================================================
 
-Sockets têm timeout de 15 segundos por espera; a conexão usa poll não bloqueante. Na campanha,
-timeout externo de 55 segundos limita o cliente e um watchdog de 60 segundos limita o comando do nó.
-A proteção não constitui uma defesa completa contra clientes que enviem bytes lentamente. Não há
-autenticação ou criptografia neste protótipo acadêmico.
+\section{Ambiente experimental e topologia CORE}
+\label{sec:ambiente}
 
-\hypertarget{testes-de-correuxe7uxe3o}{%
-\subsection{Testes de correção}\label{testes-de-correuxe7uxe3o}}
+O CORE cria redes virtuais capazes de executar aplicações e protocolos
+reais sobre recursos do Linux \cite{core}. Foi utilizada a instalação
+existente do CORE 9.2.0 em um container Docker privilegiado, com Python 3.10.
+O host era Ubuntu 22.04/WSL2, com kernel
+6.18.33.2-microsoft-standard-WSL2. Os nós compartilham CPU, memória,
+armazenamento e kernel. A identificação da imagem e os detalhes do ambiente
+foram registrados nas evidências.
 
-A compilação usa GCC, C11, OpenMP, O2, \passthrough{\lstinline!-Wall -Wextra -Wpedantic -Werror!} e
-offsets de arquivo de 64 bits. Foram executados \textbf{11 testes de integração normalmente e os
-mesmos 11 sob interposição LD\_PRELOAD}, com todos aprovados. A interposição força send de até 4093
-bytes, recv de até 257 bytes e EINTR periódico, exercitando os loops dos programas reais.
+A Figura~\ref{fig:topologia} apresenta oito clientes, um servidor,
+dois roteadores Linux e três switches CORE. O acesso dos clientes usa
+10.10.0.0/24; o núcleo, 10.20.0.0/24; e o acesso do servidor, 10.30.0.0/24.
+O servidor atende em 10.30.0.10:8080. Os roteadores têm encaminhamento IP e
+rotas estáticas; clientes e servidor usam seus respectivos gateways de acesso.
 
-A suíte cobre arquivos de 0, 1, 1023, 1024, 4096, 32768, 262144, 1048576 e 4194304 bytes, GET/PUT e
-SHA-256; sobrescrita com aumento e redução; cabeçalhos fragmentados; payload binário e comandos
-encadeados; upload interrompido; oito respostas READY antes de enviar qualquer payload; oito PUTs
-concorrentes para o mesmo nome; sintaxe inválida e arquivo ausente; symlink e FIFO; GET durante PUT;
-download truncado; cabeçalho excessivo; recuperação e timeout ocioso. O teste de oito READY comprova
-simultaneidade independentemente do tempo total da suíte.
-
-As evidências da Parte 1 ficam no diretório \passthrough{\lstinline!parte1/evidencias/!}. O arquivo
-\passthrough{\lstinline!compilacao.log!} registra a compilação; \passthrough{\lstinline!testes.log!}
-registra a execução normal; o log de interposição é
-\passthrough{\lstinline!testes\_io\_parcial.log!}. O servidor também mantém seu log de teste. Três
-testes adicionais verificam a análise: IC com unidade rodada, ausência de IC com uma única rodada e
-exclusão de tentativas incompletas ou não confirmadas.
-
-\hypertarget{parte-2.1-ambiente-e-topologia-core}{%
-\section{Parte 2.1: ambiente e topologia CORE}\label{parte-2.1-ambiente-e-topologia-core}}
-
-\hypertarget{ambiente-real}{%
-\subsection{Ambiente real}\label{ambiente-real}}
-
-O CORE \cite{core} já instalado foi localizado no Docker, no container privilegiado
-\passthrough{\lstinline!core!}, com CORE 9.2.0 e Python 3.10 em
-\passthrough{\lstinline!/opt/core/venv!}. O host usa Ubuntu 22.04/WSL2 e kernel Linux
-6.18.33.2-microsoft-standard-WSL2. Todos os nós compartilham o kernel e os recursos do host. CPU,
-memória, compilador, imagem Docker e versões estão registrados em
-\passthrough{\lstinline!parte2/evidencias/ambiente.log!}.
-
-A validação final usou iperf 3.22 \cite{iperf}, compilado de fonte oficial. Em tentativas
-preliminares com iperf 3.9 foi observado um intervalo de encerramento de aproximadamente dez
-segundos com pouco tráfego, que reduzia a média final em algumas execuções; esses ensaios não
-entraram na campanha. Ajustes de filas e atualização da ferramenta precederam a validação final, sem
-isolamento da causa específica do comportamento anterior. Os JSON entregues correspondem às
-validações finais, não a valores corrigidos manualmente.
-
-A coleta permaneceu armazenada no diretório isolado \passthrough{\lstinline!/tmp/redest1-work!} do
-container. Após a reorganização do workspace, CSV, journals, fontes executados e logs foram
-recuperados diretamente desse diretório. O executor original usado nas medições está preservado em
-\passthrough{\lstinline!parte2/evidencias/codigo\_executado/!}; a versão em
-\passthrough{\lstinline!parte2/core/!} adapta os caminhos à separação por partes.
-
-\hypertarget{redes-de-acesso-e-nuxfacleo}{%
-\subsection{Redes de acesso e núcleo}\label{redes-de-acesso-e-nuxfacleo}}
-
-\begin{figure}
-\centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/topologia.pdf}
-\caption{Topologia real com duas redes de acesso, núcleo, dois roteadores e oito clientes.}
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=\linewidth]{figuras/topologia.pdf}
+	\caption{Topologia executada no CORE. O gargalo atua nas saídas R1:eth1
+		e R2:eth0, cobrindo os dois sentidos de transmissão.}
+	\label{fig:topologia}
 \end{figure}
 
-\begin{longtable}[]{@{}ll@{}}
-\toprule
-Elemento & Endereçamento\tabularnewline
-\midrule
-\endhead
-Acesso cliente & 10.10.0.0/24; clientes 10.10.0.10 a 10.10.0.17\tabularnewline
-Roteador 1 & eth0 10.10.0.1; eth1 10.20.0.1\tabularnewline
-Núcleo & 10.20.0.0/24, com switch CORE\tabularnewline
-Roteador 2 & eth0 10.20.0.2; eth1 10.30.0.1\tabularnewline
-Acesso servidor & 10.30.0.0/24; servidor 10.30.0.10:8080\tabularnewline
-\bottomrule
-\end{longtable}
+\subsection{Perfis e validação da rede}
 
-Os dois roteadores têm encaminhamento IP habilitado e rotas estáticas. Clientes e servidor usam seus
-roteadores de acesso como gateway padrão. Os acessos Ethernet virtuais não recebem limitação
-artificial adicional. O recurso compartilhado é modelado nas saídas para o núcleo: roteador1:eth1 no
-sentido cliente-servidor e roteador2:eth0 no sentido servidor-cliente.
+Os acessos Ethernet não recebem limitação artificial adicional.
+Nas saídas dos roteadores para o núcleo, HTB limita taxa e teto, e netem
+aplica atraso fixo. O perfil A usa 100 Mbps e 5 ms por direção; B usa
+20 Mbps e 30 ms. Os RTT nominais são, respectivamente, 10 e 60 ms.
+São cenários propostos para o experimento, sem associação universal com
+uma tecnologia de acesso.
 
-Cada saída usa HTB, taxa e teto iguais, burst de 16 KiB, e fila filha netem com atraso fixo e limite
-de 10000 pacotes. Não foi configurada perda artificial. TSO, GSO e GRO foram desativados; o controle
-de congestionamento TCP é CUBIC. A fila ainda pode descartar pacotes por congestionamento, por isso
-os contadores reais de qdisc foram preservados nas validações e no estado final disponível.
+A configuração usa burst de 16 KiB e fila de 10000 pacotes, sem perda
+artificial. TSO, GSO e GRO foram desativados; o TCP usa CUBIC. Embora não
+haja descarte artificial, perdas por congestionamento continuam possíveis.
+Os parâmetros e os contadores de fila foram registrados.
 
-\begin{longtable}[]{@{}llll@{}}
-\toprule
-Perfil proposto & Taxa por sentido & Atraso por direção & RTT nominal\tabularnewline
-\midrule
-\endhead
-A & 100 Mbps & 5 ms & 10 ms\tabularnewline
-B & 20 Mbps & 30 ms & 60 ms\tabularnewline
-\bottomrule
-\end{longtable}
+A validação executou ping com dez pacotes, traceroute ICMP e iperf 3.22 nos
+dois sentidos \cite{iperf}. O iperf usou uma conexão TCP, cinco segundos
+medidos, um segundo omitido e janela solicitada de 256 KiB. Os resultados
+recebidos estão na Tabela~\ref{tab:validacao}. O traceroute confirmou a
+passagem por 10.10.0.1, 10.20.0.2 e 10.30.0.10; nenhum pacote do ping foi perdido.
 
-São dois cenários controlados de conectividade, sem pretensão de representar universalmente
-tecnologias de acesso. O ping cruza um atraso na ida e outro na volta.
-\passthrough{\lstinline!core/perfis.json!} registra parâmetros;
-\passthrough{\lstinline!core/run\_experiments.py!} é a topologia executável completa. O XML preserva
-o desenho e os enlaces, devendo ser usado com o script para reaplicar rotas e shaping.
+\input{tabelas/validacao}
 
-\hypertarget{validauxe7uxe3o-de-conectividade-e-gargalo}{%
-\subsection{Validação de conectividade e gargalo}\label{validauxe7uxe3o-de-conectividade-e-gargalo}}
+% ==========================================================
+% 4. METODOLOGIA
+% ==========================================================
 
-Foram executados ping com dez pacotes, traceroute ICMP e iperf nos dois sentidos. O iperf usa uma
-conexão TCP, cinco segundos medidos, um segundo omitido e janela solicitada de 256 KiB. A
-verificação automática exige vazão recebida entre 65\% e 120\% do teto, RTT médio entre 80\% do
-nominal e nominal mais 15 ms e zero perda no ping.
+\section{Metodologia dos experimentos}
+\label{sec:metodologia}
 
-\begin{longtable}[]{@{}lllllll@{}}
-\toprule
-Perfil & Mbps cfg. & Atraso ms & Ping médio ms & Ida Mbps & Volta Mbps & Perda\tabularnewline
-\midrule
-\endhead
-A & 100 & 5 & 11.817 & 95.348 & 94.995 & 0/10\tabularnewline
-B & 20 & 30 & 60.707 & 19.206 & 19.085 & 0/10\tabularnewline
-\bottomrule
-\end{longtable}
+\subsection{Fatores e repetições}
 
-As colunas de vazão são valores recebidos do iperf em Mbps; perda indica pacotes perdidos/enviados
-no ping. O traceroute confirmou os saltos 10.10.0.1, 10.20.0.2 e 10.30.0.10. Os logs integrais estão
-em \passthrough{\lstinline!parte2/evidencias/ping\_*.log!},
-\passthrough{\lstinline!traceroute\_*.log!}, \passthrough{\lstinline!iperf\_*\_*.json!} e
-\passthrough{\lstinline!tc\_*.json!}.
+Os objetos de 32 e 256 KiB representam tamanhos de miniaturas e imagens
+comprimidas de uma aplicação Web; 1 e 4 MiB representam anexos ou objetos de
+armazenamento em nuvem. São arquivos binários sintéticos determinísticos:
+o experimento compara custos de comunicação e transmissão, sem reproduzir
+HTTP, TLS, codecs ou distribuições reais de usuários.
 
-O piloto executou GET e PUT em A e B com 256 KiB e quatro clientes: quatro rodadas, 16
-transferências e todos os hashes corretos. \passthrough{\lstinline!evidencias/piloto.csv!} e seu
-journal preservam esse ensaio, que não entra nas estatísticas principais.
+A matriz fatorial cruza dois perfis, GET e PUT separadamente, quatro
+tamanhos e três concorrências: 1, 4 e 8 clientes. Cada configuração tem
+11 repetições, totalizando $2\times2\times4\times3\times11=528$ rodadas e
+2288 transferências individuais. Dentro de cada repetição, as 48 combinações
+foram embaralhadas com semente 20261105. O arquivo da matriz preserva a ordem.
 
-\hypertarget{parte-2.2-planejamento-experimental}{%
-\section{Parte 2.2: planejamento experimental}\label{parte-2.2-planejamento-experimental}}
+Um piloto anterior executou GET e PUT em A e B com 256 KiB e quatro
+clientes: quatro rodadas e 16 transferências corretas. Esse piloto,
+as validações e os testes de reprodução não entram na amostra principal.
+Não foram removidos outliers nem descartadas primeiras transferências da
+campanha. O cache de arquivos não foi limpo; os dados estavam previamente preparados.
 
-Os objetos de \textbf{32 KiB e 256 KiB} representam tamanhos de miniaturas e imagens comprimidas de
-uma aplicação Web; \textbf{1 MiB e 4 MiB} representam anexos ou objetos de uma aplicação de
-armazenamento em nuvem. Os dados são binários sintéticos determinísticos: o propósito é contrastar
-custo fixo de comunicação e transmissão de payload. Não se reproduzem HTTP, TLS, codecs,
-distribuições reais de usuários ou uma aplicação comercial.
+\subsection{Concorrência, tempo e vazão}
 
-A matriz fatorial cruza dois perfis, duas operações, quatro tamanhos e concorrências de 1, 4 e 8
-clientes. Cada combinação tem 11 repetições: \(2\times2\times4\times3\times11=528\) rodadas e 2288
-transferências individuais. GET e PUT são executados em rodadas separadas. Dentro de cada bloco de
-repetição, as 48 combinações são embaralhadas com semente 20261105. A matriz preserva a ordem
-executada.
+Cada cliente é um processo em um nó distinto. O executor fornece uma mesma
+data futura no relógio monotônico, 150 ms à frente; os processos aguardam
+essa barreira antes de iniciar a conexão. O cliente C mede início e duração
+com CLOCK\_MONOTONIC. Os instantes são comparáveis porque os nós compartilham
+o kernel; o relógio de parede apenas identifica a coleta em UTC.
 
-As 11 repetições permitem observar dispersão dentro do prazo, sem garantir previamente uma precisão
-estatística específica. Não foram excluídos outliers nem descartadas primeiras transferências da
-campanha. Piloto e tráfego de validação são separados. O cache de arquivos não foi limpo; os
-resultados descrevem dados previamente preparados, sem controle de disco frio.
+O tempo inclui conexão, comandos, negociação, corpo e conclusão local.
+PUT termina após receber a confirmação da publicação; GET, após fechar e
+publicar o destino local. Criação do processo, espera da barreira, geração
+dos dados e verificação SHA-256 ficam fora da medida. O executor aplica
+limite externo de 55 segundos ao cliente e watchdog de 60 segundos ao comando do nó.
 
-\hypertarget{parte-2.3-execuuxe7uxe3o-telemetria-e-retomada}{%
-\section{Parte 2.3: execução, telemetria e
-retomada}\label{parte-2.3-execuuxe7uxe3o-telemetria-e-retomada}}
+A vazão útil individual é $G=8B/(10^6T)$, em Mbps, com $B$ bytes de corpo
+e $T$ segundos. A vazão agregada divide a soma dos corpos pelo intervalo
+entre o primeiro início e a última conclusão da rodada. Ela não é a soma
+das vazões individuais quando as durações diferem.
 
-Cada cliente é um processo real em um nó CORE distinto. O executor fornece uma mesma data futura no
-relógio monotônico, 150 ms à frente. Os processos aguardam essa barreira antes de iniciar a conexão
-TCP. Início e duração são medidos no programa C com CLOCK\_MONOTONIC; o relógio de parede serve
-apenas para datar a coleta em UTC. Os instantes são comparáveis porque os nós compartilham o kernel.
+\subsection{Integridade e retomada}
 
-O intervalo inclui conexão, comandos, negociação READY quando aplicável, payload e conclusão local.
-PUT termina após receber OK da publicação no servidor; GET termina após fechamento e rename no
-cliente. Geração de dados, criação do processo, espera da barreira e verificação SHA-256 ficam fora
-desse intervalo. Os hashes de origem e destino são registrados para cada transferência.
+Cada observação registra perfil, operação, concorrência, tamanho,
+repetição, cliente, tentativa, início, duração, vazão, bytes, status e hashes,
+além de desvio de início, sobreposição, duração da rodada e vazão agregada.
+GET compara o destino local à origem; PUT compara o arquivo publicado no
+servidor à origem do cliente. Na campanha, PUT usa um nome remoto por cliente,
+evitando que disputas de nomes se tornem um fator adicional.
 
-Todas as rodadas concorrentes apresentaram interseção temporal positiva: a menor foi \textbf{33.313
-ms}, e o maior desvio entre inícios foi \textbf{2.038 ms}. Isso complementa o teste de oito READY e
-comprova que os clientes da campanha não foram serializados. Cada PUT da campanha usa um nome remoto
-por cliente, evitando disputa de nomes como fator experimental.
+O CSV é sincronizado em disco antes do marcador de conclusão no journal.
+A análise só aceita uma tentativa confirmada com todos os clientes da
+rodada. A retomada foi testada após duas rodadas, sem duplicá-las, e uma
+execução posterior à conclusão informou que não havia rodadas pendentes.
+Esse teste pressupõe checkpoint íntegro; não simula queda de energia ou
+corrupção arbitrária. Falhas com status terminal seriam mantidas como falhas.
 
-A vazão útil individual é \(8B/(10^6T)\), em Mbps, sem contabilizar cabeçalhos e comandos. A vazão
-agregada divide a soma de payloads pelo intervalo entre o primeiro início e a última conclusão da
-rodada, sem simplesmente somar vazões individuais com durações diferentes.
+\subsection{Tratamento estatístico}
 
-O CSV registra perfil, operação, tamanho, concorrência, repetição, cliente, tentativa, início
-monotônico, duração, vazão, bytes, status, hashes esperado/observado, erro, desvio de início,
-sobreposição, duração da rodada, vazão agregada e horário UTC. O executor sincroniza o CSV em disco
-antes de confirmar a tentativa no journal JSONL. Uma rodada só é aproveitada se a tentativa estiver
-confirmada e todos os clientes previstos estiverem presentes; tentativas incompletas ou substituídas
-são excluídas sem serem tratadas como conclusão.
+Clientes da mesma rodada compartilham enlace, filas e servidor.
+Por isso, a rodada é a unidade de repetição para estimar incerteza.
+Para tempo e vazão individual, calcula-se a média dos clientes em cada
+rodada e, então, o IC de 95\% entre as 11 médias:
+\begin{equation}
+	\bar{x}\;\pm\;t_{0{,}975;10}\frac{s_{\mathrm{rodadas}}}{\sqrt{11}}.
+	\label{eq:intervalo}
+\end{equation}
+A vazão agregada tem uma observação por rodada. Mediana e desvio padrão
+entre clientes descrevem a distribuição individual; o CSV também contém
+o desvio entre médias de rodada. O IC da mediana usa bootstrap percentil
+com 3000 reamostragens de rodadas inteiras, preservando os clientes agrupados.
+As taxas usam todas as observações; desempenho considera sucessos.
+Os IC são marginais, sem correção para comparações múltiplas.
 
-A retomada foi exercitada encerrando o executor após duas rodadas e iniciando novamente a campanha.
-As tentativas originais \passthrough{\lstinline!ed8393b2ed98!} e
-\passthrough{\lstinline!6833dbccb620!} foram preservadas exatamente uma vez. Uma nova execução após
-as 528 rodadas também retornou \passthrough{\lstinline!No pending rounds!}, registrado em
-\passthrough{\lstinline!evidencias/retomada\_concluida.log!}. Isso valida checkpoints íntegros; não
-é um teste de queda de energia, corrupção arbitrária ou interrupção no meio de uma escrita de
-arquivo. Falhas com status terminal permanecem como medições de falha e não são apagadas por
-repetição automática.
+% ==========================================================
+% 5. RESULTADOS
+% ==========================================================
 
-\hypertarget{parte-2.4-estatuxedstica-e-resultados}{%
-\section{Parte 2.4: estatística e resultados}\label{parte-2.4-estatuxedstica-e-resultados}}
+\section{Resultados e análise estatística}
+\label{sec:resultados}
 
-\hypertarget{unidade-experimental-e-intervalos-de-confianuxe7a}{%
-\subsection{Unidade experimental e intervalos de
-confiança}\label{unidade-experimental-e-intervalos-de-confianuxe7a}}
+A campanha principal ocorreu em 5 de novembro de 2026, entre 17:05:21 e
+17:22:04 UTC. Foram confirmadas as 528 rodadas e as 2288 transferências,
+com taxa empírica de sucesso de 100\% e de falha de 0\%. Todas as verificações
+SHA-256 corresponderam. As 48 configurações têm 11 repetições e nenhuma
+observação foi excluída por tentativa incompleta ou substituída.
 
-O cliente é unidade de observação; a \textbf{rodada} é unidade de repetição. Clientes de uma mesma
-rodada compartilham enlace, filas e servidor, portanto 88 observações com oito clientes não são
-consideradas 88 repetições independentes.
+Todas as rodadas com múltiplos clientes tiveram interseção temporal
+positiva: a menor foi 33,313 ms, e o maior desvio entre inícios foi 2,038 ms.
+Esses registros, junto ao teste de oito READY, confirmam que os clientes não
+foram atendidos sequencialmente.
 
-A média de tempo e vazão usa médias de clientes bem-sucedidos em cada rodada. O IC de 95\% usa
-Student entre as \(m\) médias de rodada:
-\(\bar{x}\pm t_{0{,}975,m-1}s_{\mathrm{rodadas}}/\sqrt{m}\). Nesta campanha completa, \(m=11\) em
-cada configuração, com dez graus de liberdade. A vazão agregada tem uma observação por rodada.
-Mediana e desvio padrão entre clientes são descritivos da distribuição individual; o CSV também
-apresenta desvio entre médias de rodada. O IC da mediana usa bootstrap percentil de 3000
-reamostragens de rodadas inteiras, com semente fixa, preservando os clientes agrupados.
+A Tabela~\ref{tab:tempos} apresenta os tempos para 4 MiB, incluindo média,
+mediana, DP individual e IC da média. A Figura~\ref{fig:tempo} reúne todos
+os tamanhos. As estatísticas completas das 48 configurações, inclusive
+IC das medianas e das vazões, permanecem no CSV resumido.
 
-Sucesso e falha são calculados por observação e por rodada. Desempenho considera apenas sucessos,
-com essa seleção explícita. Uma única rodada não recebe IC estimado. Os intervalos são marginais,
-sem ajuste para comparações múltiplas, e a abordagem não elimina possível dependência temporal
-residual entre rodadas do mesmo host.
+\input{tabelas/tempos_4mib}
 
-\hypertarget{completude-e-desempenho-observado}{%
-\subsection{Completude e desempenho observado}\label{completude-e-desempenho-observado}}
-
-Foram verificados \textbf{528/528 rodadas, 2288/2288 sucessos, taxa de sucesso de 100\% e taxa de
-falha de 0\%}. As 48 configurações têm 11 repetições. Nenhuma observação foi excluída por tentativa
-incompleta ou substituída. Zero falhas na amostra não garante probabilidade de falha nula em outros
-contextos.
-
-A tabela apresenta objetos de 4 MiB: tempo médio por cliente e IC entre rodadas, vazão individual
-média e vazão agregada média. Todas as médias e IC completos estão em
-\passthrough{\lstinline!resultados\_resumidos.csv!}.
-
-\begin{longtable}[]{@{}lllllll@{}}
-\toprule
-Perfil & Op. & N & Tempo s & IC 95\% s & Mbps/cliente & Mbps agregado\tabularnewline
-\midrule
-\endhead
-A & GET & 1 & 0.396 & 0.396 a 0.397 & 84.638 & 84.638\tabularnewline
-A & GET & 4 & 1.301 & 1.264 a 1.339 & 26.092 & 92.431\tabularnewline
-A & GET & 8 & 2.602 & 2.502 a 2.702 & 13.060 & 93.947\tabularnewline
-A & PUT & 1 & 0.411 & 0.409 a 0.413 & 81.678 & 81.678\tabularnewline
-A & PUT & 4 & 1.324 & 1.273 a 1.375 & 25.681 & 91.924\tabularnewline
-A & PUT & 8 & 2.543 & 2.495 a 2.591 & 13.358 & 93.859\tabularnewline
-B & GET & 1 & 2.024 & 2.023 a 2.024 & 16.582 & 16.582\tabularnewline
-B & GET & 4 & 6.626 & 6.341 a 6.912 & 5.134 & 18.679\tabularnewline
-B & GET & 8 & 13.030 & 12.922 a 13.138 & 2.599 & 18.947\tabularnewline
-B & PUT & 1 & 2.102 & 2.065 a 2.139 & 15.970 & 15.970\tabularnewline
-B & PUT & 4 & 6.380 & 6.159 a 6.602 & 5.364 & 18.527\tabularnewline
-B & PUT & 8 & 13.422 & 13.333 a 13.510 & 2.509 & 18.869\tabularnewline
-\bottomrule
-\end{longtable}
-
-\begin{figure}
-\centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/tempo_resposta.pdf}
-\caption{Tempo de resposta por perfil, operação, tamanho e concorrência, com IC de 95\% entre
-rodadas.}
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=\linewidth]{figuras/tempo_resposta.pdf}
+	\caption{Tempo médio de resposta por operação, perfil e concorrência.
+		As barras representam IC de 95\% calculados entre rodadas.}
+	\label{fig:tempo}
 \end{figure}
 
-\begin{figure}
-\centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/vazao_individual.pdf}
-\caption{Vazão útil individual, com IC de 95\% entre rodadas.}
+As Figuras~\ref{fig:individual} e~\ref{fig:agregada} mostram a vazão útil
+individual e a agregada. Para 4 MiB e oito clientes, a agregada ficou próxima
+de 94 Mbps em A e 19 Mbps em B. Entre quatro e oito clientes, o ganho
+agregado variou aproximadamente de 1,4\% a 2,1\%, conforme a operação e o perfil.
+
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=\linewidth]{figuras/vazao_individual.pdf}
+	\caption{Vazão útil individual. O aumento da concorrência divide a
+		capacidade compartilhada; as barras representam IC de 95\% entre rodadas.}
+	\label{fig:individual}
 \end{figure}
 
-\begin{figure}
-\centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/vazao_agregada.pdf}
-\caption{Vazão agregada pelo intervalo completo da rodada.}
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=\linewidth]{figuras/vazao_agregada.pdf}
+	\caption{Vazão agregada pelo intervalo completo da rodada, com IC de 95\%.
+		A escala de cada perfil acompanha seu limite de capacidade.}
+	\label{fig:agregada}
 \end{figure}
 
-\hypertarget{objetos-pequenos-distribuiuxe7uxe3o-e-cdf}{%
-\subsection{Objetos pequenos, distribuição e CDF}\label{objetos-pequenos-distribuiuxe7uxe3o-e-cdf}}
+Para 32 KiB e um cliente, GET levou cerca de 0,033 s em A e 0,185 s em B;
+PUT levou 0,045 s e 0,245 s. A Tabela~\ref{tab:comparacoes} compara razões
+de médias em tamanhos e concorrências extremos. São comparações descritivas,
+sem intervalo específico ou teste de hipótese para essas razões.
 
-\begin{longtable}[]{@{}lllll@{}}
-\toprule
-Perfil & Op. & N & Tempo s (32 KiB) & Mbps/cliente\tabularnewline
-\midrule
-\endhead
-A & GET & 1 & 0.0333 & 7.883\tabularnewline
-A & GET & 8 & 0.0421 & 6.324\tabularnewline
-A & PUT & 1 & 0.0448 & 5.862\tabularnewline
-A & PUT & 8 & 0.0515 & 5.149\tabularnewline
-B & GET & 1 & 0.1847 & 1.419\tabularnewline
-B & GET & 8 & 0.2192 & 1.203\tabularnewline
-B & PUT & 1 & 0.2448 & 1.071\tabularnewline
-B & PUT & 8 & 0.2775 & 0.949\tabularnewline
-\bottomrule
-\end{longtable}
+\input{tabelas/comparacoes}
 
-A tabela de 32 KiB mostra a relevância do custo de conexão e negociação em relação ao payload. Os
-gráficos de distribuição e CDF descrevem observações individuais, sem pressupor independência entre
-clientes de uma rodada.
+A Figura~\ref{fig:distribuicao} apresenta a dispersão individual em 4 MiB,
+e a Figura~\ref{fig:cdf} mostra a CDF empírica para um e oito clientes.
+Essas visualizações não supõem independência entre clientes da mesma rodada.
 
-\begin{figure}
-\centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/distribuicao.pdf}
-\caption{Distribuição do tempo individual para 4 MiB; caixas, médias e pontos extremos são
-descritivos.}
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=\linewidth]{figuras/distribuicao.pdf}
+	\caption{Distribuição do tempo individual para 4 MiB. As caixas e os
+		pontos são descritivos; os marcadores triangulares indicam médias.}
+	\label{fig:distribuicao}
 \end{figure}
 
-\begin{figure}
-\centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/cdf.pdf}
-\caption{CDF empírica para 4 MiB, comparando perfis e concorrências extremas.}
+\begin{figure}[!htbp]
+	\centering
+	\includegraphics[width=\linewidth]{figuras/cdf.pdf}
+	\caption{CDF empírica do tempo para 4 MiB. $N$ indica clientes simultâneos;
+		as curvas comparam os perfis A/B e as concorrências extremas.}
+	\label{fig:cdf}
 \end{figure}
 
-\hypertarget{discussuxe3o}{%
-\section{Discussão}\label{discussuxe3o}}
+% ==========================================================
+% 6. DISCUSSÃO
+% ==========================================================
 
-\hypertarget{gargalo-compartilhado-e-saturauxe7uxe3o}{%
-\subsection{Gargalo compartilhado e saturação}\label{gargalo-compartilhado-e-saturauxe7uxe3o}}
+\section{Discussão dos resultados}
+\label{sec:discussao}
 
-Com oito clientes e arquivos de 4 MiB, a vazão agregada ficou próxima de 94 Mbps no perfil A e de 19
-Mbps no B. Ao passar de quatro para oito clientes, o ganho agregado foi pequeno, enquanto o tempo
-individual aumentou. A tabela quantifica esse comportamento.
+O pequeno ganho agregado de quatro para oito clientes, acompanhado por
+aumento do tempo individual, é compatível com saturação do gargalo
+compartilhado. Em GET de 4 MiB, o tempo passou de aproximadamente 0,396 s
+para 2,602 s em A e de 2,024 s para 13,030 s em B. Em PUT, passou de 0,411 s
+para 2,543 s em A e de 2,102 s para 13,422 s em B. Apenas três níveis de
+concorrência não permitem localizar um ponto exato de saturação.
 
-\begin{longtable}[]{@{}lllll@{}}
-\toprule
-Perfil & Op. & Tempo 8/1 & Agregado 8/4 & Teto com N=8\tabularnewline
-\midrule
-\endhead
-A & GET & 6.56 & 1.016 & 93.9\%\tabularnewline
-A & PUT & 6.19 & 1.021 & 93.9\%\tabularnewline
-B & GET & 6.44 & 1.014 & 94.7\%\tabularnewline
-B & PUT & 6.38 & 1.018 & 94.3\%\tabularnewline
-\bottomrule
-\end{longtable}
+PUT inclui a espera por READY e pela confirmação final; GET inclui o
+cabeçalho de resposta e a conclusão da gravação local. Essas diferenças
+ajudam a interpretar os objetos pequenos, mas não isolam causas. A direção
+da diferença entre GET e PUT muda em algumas configurações; não se pode
+concluir que uma operação é sempre mais rápida.
 
-A proximidade das razões agregadas de um, junto com o aumento de tempo e a redução de vazão
-individual, é compatível com saturação do gargalo compartilhado. Não é possível determinar seu ponto
-exato com apenas três níveis de concorrência. O resultado não demonstra por si só saturação de CPU
-ou disco: não houve instrumentação contínua desses recursos durante cada rodada.
+B combina taxa cinco vezes menor e RTT nominal seis vezes maior.
+Assim, diferenças A/B descrevem o perfil completo, sem separar o efeito
+de taxa e latência. Objetos grandes sustentam maior uso do gargalo, enquanto
+os menores são mais sensíveis aos custos fixos das fases de comunicação.
+Isolar cada fator exigiria outra matriz, variando somente um deles por vez.
 
-No perfil A, GET de 4 MiB passou de aproximadamente 0,396 s com um cliente para 2,602 s com oito; no
-B, de 2,024 s para 13,030 s. Para PUT, os valores foram aproximadamente 0,411 s e 2,543 s em A,
-contra 2,102 s e 13,422 s em B. Esses valores vêm das médias das rodadas, e não de uma previsão
-teórica de transmissão.
+\subsection{Limitações}
 
-\hypertarget{get-versus-put-e-perfil-a-versus-b}{%
-\subsection{GET versus PUT e perfil A versus B}\label{get-versus-put-e-perfil-a-versus-b}}
+Os nós compartilham um host WSL/Docker, sem reserva de CPU ou controle de
+disco frio. A Ethernet virtual usa atraso fixo, sem jitter ou perda
+artificial, e a fila de 10000 pacotes não modela um equipamento residencial
+específico. Os snapshots não incluem acompanhamento contínuo de pacotes,
+CPU e disco por rodada; portanto, não identificam a causa de cada observação extrema.
 
-A tabela mostra razões de médias de tempo; uma razão PUT/GET maior que um indica PUT mais demorado
-naquela célula. São comparações descritivas, sem teste pareado adicional ou IC específico das
-razões.
+Não foram avaliados TLS, autenticação, longa duração ou durabilidade após
+queda de energia. Onze rodadas oferecem uma estimativa limitada de
+variabilidade, com possível dependência temporal residual. Zero falhas
+observadas não significa probabilidade de falha nula fora da amostra.
 
-\begin{longtable}[]{@{}llllll@{}}
-\toprule
-KiB & N & PUT/GET A & PUT/GET B & B/A GET & B/A PUT\tabularnewline
-\midrule
-\endhead
-32 & 1 & 1.343 & 1.325 & 5.543 & 5.469\tabularnewline
-32 & 8 & 1.222 & 1.266 & 5.202 & 5.387\tabularnewline
-4096 & 1 & 1.036 & 1.039 & 5.104 & 5.117\tabularnewline
-4096 & 8 & 0.977 & 1.030 & 5.007 & 5.279\tabularnewline
-\bottomrule
-\end{longtable}
+% ==========================================================
+% 7. CONCLUSÕES
+% ==========================================================
 
-PUT inclui a espera por READY e pela confirmação final; GET inclui o cabeçalho de resposta e
-conclusão da gravação local. Esses custos ajudam a interpretar os dados, mas não isolam causas.
-Algumas diferenças entre operações mudam de direção conforme a concorrência e o tamanho, portanto os
-dados não sustentam afirmar que uma operação é universalmente mais rápida.
+\section{Conclusões}
+\label{sec:conclusoes}
 
-B combina taxa cinco vezes menor e RTT nominal seis vezes maior. As razões B/A refletem o perfil
-completo; a matriz não isola os efeitos individuais de taxa e latência. Objetos pequenos ficam mais
-sujeitos aos custos fixos das fases do protocolo; objetos grandes sustentam maior uso do gargalo
-agregado. Separar os dois fatores exigiria variar somente um deles por vez em um experimento
-adicional.
+Os testes verificaram GET/PUT binários e vazios, sobrescrita, preservação
+de versões após falhas e oito atendimentos simultâneos. A campanha no CORE
+concluiu 528 rodadas e 2288 transferências com integridade confirmada.
 
-\hypertarget{limitauxe7uxf5es}{%
-\section{Limitações}\label{limitauxe7uxf5es}}
-
-Os resultados se referem a uma única máquina WSL/Docker, versão de kernel, imagem e implementação,
-com CPU, memória, armazenamento e escalonador compartilhados. Não há reserva de CPU ou afinidade
-fixa. Os acessos são Ethernet virtuais; os perfis são aplicados no gargalo do núcleo. Atraso fixo e
-ausência de perda artificial não equivalem a uma rede física com jitter, mobilidade ou perda de
-rádio.
-
-A fila de 10000 pacotes pode acomodar rajadas e não representa necessariamente um equipamento
-residencial. Há snapshots de qdisc, sem captura contínua de pacotes ou telemetria por fila de cada
-rodada; por isso não se atribui cada observação extrema a uma causa específica. Não foram isolados
-cache de página, disco frio, TLS, justiça entre aplicações, longa duração ou hash dentro do
-protocolo. Onze rodadas oferecem uma estimativa limitada de variabilidade, e os IC não corrigem
-comparações múltiplas.
-
-A retomada foi validada com checkpoint íntegro, sem simulação de queda física de energia. Os logs
-finais e dados foram preservados no Docker e recuperados após a reorganização do workspace;
-diagnósticos de tentativas preliminares não integram os resultados principais. O relatório não
-identifica integrantes ou contribuições individuais porque essas informações não foram fornecidas.
-
-\hypertarget{conclusuxf5es}{%
-\section{Conclusões}\label{conclusuxf5es}}
-
-A Parte 1 compila com avisos tratados como erros, transfere arquivos binários e vazios, sobrescreve
-destinos e preserva versões anteriores em transferências interrompidas. Os testes cobriram oito
-atendimentos simultâneos, conflitos de nomes e operações parciais de socket. A Parte 2 utilizou o
-CORE instalado no Docker para executar topologia roteada, dois perfis validados e a campanha
-completa de 528 rodadas.
-
-A coleta produziu 2288 transferências corretas. Para objetos grandes, a vazão agregada se aproximou
-do limite compartilhado e cresceu pouco entre quatro e oito clientes, enquanto o tempo por cliente
-aumentou. A análise de incerteza usa rodadas, respeitando a dependência interna entre clientes.
-Fontes, matriz, dados, estatísticas, figuras e logs permitem inspecionar, reproduzir e defender
-essas conclusões sem resultados inventados.
-
-\hypertarget{reproduuxe7uxe3o-e-organizauxe7uxe3o-da-entrega}{%
-\section{Reprodução e organização da
-entrega}\label{reproduuxe7uxe3o-e-organizauxe7uxe3o-da-entrega}}
-
-A raiz contém apenas o índice e as duas partes. \passthrough{\lstinline!parte1/!} contém fontes,
-Makefile, testes, originais e evidências de correção. \passthrough{\lstinline!parte2/!} contém CORE,
-scripts, matriz, CSV, gráficos, relatório LaTeX/Markdown/PDF e evidências experimentais. Cada parte
-possui seu README e STATUS.
-
-No Linux, instale GCC/make, Docker, Python 3, NumPy, SciPy, Matplotlib, Pandoc e TeX Live com
-suporte a português. A imagem \passthrough{\lstinline!core!} deve conter CORE 9.2.0. A partir da
-raiz:
-
-\begin{lstlisting}[language=bash]
-make -C parte1
-bash parte1/scripts/verify.sh
-sudo bash parte2/scripts/run_docker.sh pilot
-sudo bash parte2/scripts/run_docker.sh main
-python3 parte2/scripts/check_outputs.py
-python3 parte2/scripts/analyze.py
-python3 parte2/scripts/plot_topology.py
-python3 parte2/scripts/build_report.py
-\end{lstlisting}
-
-O executor usa o container \passthrough{\lstinline!core!} e
-\passthrough{\lstinline!/tmp/redest1-work!} por padrão. A campanha entregue está concluída nesse
-diretório e sua retomada não repete medições confirmadas. Para uma nova campanha, escolha outro
-CORE\_WORKDIR e preserve uma cópia dos resultados entregues antes de copiar novos dados.
-\passthrough{\lstinline!scripts/sync\_docker.sh!} conserva CSV e journal juntos; a análise só
-aproveita rodadas completas.
-
-Após a separação das pastas, o fluxo de reprodução também foi executado em um diretório Docker novo.
-Recompilou os programas e o iperf, reconstruiu e validou a topologia e concluiu outras quatro
-rodadas de piloto (16 transferências corretas). Essas observações ficam em
-\passthrough{\lstinline!evidencias/reprodutibilidade/!} e não foram somadas à campanha principal.
-
-O LaTeX entregue independe de Pandoc para recompilar. Dentro de \passthrough{\lstinline!parte2/!},
-com a pasta \passthrough{\lstinline!graficos/!} ao lado do fonte:
-
-\begin{lstlisting}[language=bash]
-pdflatex -interaction=nonstopmode -halt-on-error relatorio_final.tex
-pdflatex -interaction=nonstopmode -halt-on-error relatorio_final.tex
-pdflatex -interaction=nonstopmode -halt-on-error relatorio_final.tex
-\end{lstlisting}
-
-Pandoc é usado apenas para regenerar o fonte a partir do Markdown e dos dados. O gerador Python do
-relatório cria o fonte e compila o PDF. Os arquivos intermediários ficam na pasta de compilação.
-
-\hypertarget{apuxeandice-estatuxedsticas-das-48-configurauxe7uxf5es}{%
-\section{Apêndice: estatísticas das 48
-configurações}\label{apuxeandice-estatuxedsticas-das-48-configurauxe7uxf5es}}
-
-Tamanho em KiB, N clientes, R rodadas, tempos em segundos e vazão útil em Mbps por cliente. DP
-descreve a dispersão individual, não o erro padrão usado no IC. IC das médias e medianas, taxas e
-vazão agregada estão no CSV completo.
-
-\begin{longtable}[]{@{}lllllllll@{}}
-\toprule
-Perfil & Op. & KiB & N & R & Média s & Mediana s & DP s & Mbps\tabularnewline
-\midrule
-\endhead
-A & GET & 32 & 1 & 11 & 0.033 & 0.033 & 0.002 & 7.883\tabularnewline
-A & GET & 32 & 4 & 11 & 0.037 & 0.037 & 0.002 & 7.104\tabularnewline
-A & GET & 32 & 8 & 11 & 0.042 & 0.041 & 0.006 & 6.324\tabularnewline
-A & GET & 256 & 1 & 11 & 0.068 & 0.068 & 0.001 & 30.868\tabularnewline
-A & GET & 256 & 4 & 11 & 0.111 & 0.110 & 0.007 & 19.004\tabularnewline
-A & GET & 256 & 8 & 11 & 0.186 & 0.189 & 0.020 & 11.427\tabularnewline
-A & GET & 1024 & 1 & 11 & 0.136 & 0.133 & 0.007 & 62.025\tabularnewline
-A & GET & 1024 & 4 & 11 & 0.361 & 0.366 & 0.023 & 23.320\tabularnewline
-A & GET & 1024 & 8 & 11 & 0.681 & 0.692 & 0.055 & 12.423\tabularnewline
-A & GET & 4096 & 1 & 11 & 0.396 & 0.397 & 0.001 & 84.638\tabularnewline
-A & GET & 4096 & 4 & 11 & 1.301 & 1.333 & 0.138 & 26.092\tabularnewline
-A & GET & 4096 & 8 & 11 & 2.602 & 2.679 & 0.264 & 13.060\tabularnewline
-A & PUT & 32 & 1 & 11 & 0.045 & 0.044 & 0.001 & 5.862\tabularnewline
-A & PUT & 32 & 4 & 11 & 0.048 & 0.048 & 0.004 & 5.442\tabularnewline
-A & PUT & 32 & 8 & 11 & 0.052 & 0.050 & 0.006 & 5.149\tabularnewline
-A & PUT & 256 & 1 & 11 & 0.079 & 0.078 & 0.001 & 26.614\tabularnewline
-A & PUT & 256 & 4 & 11 & 0.120 & 0.120 & 0.007 & 17.549\tabularnewline
-A & PUT & 256 & 8 & 11 & 0.187 & 0.192 & 0.024 & 11.422\tabularnewline
-A & PUT & 1024 & 1 & 11 & 0.148 & 0.147 & 0.002 & 56.586\tabularnewline
-A & PUT & 1024 & 4 & 11 & 0.366 & 0.366 & 0.030 & 23.084\tabularnewline
-A & PUT & 1024 & 8 & 11 & 0.671 & 0.675 & 0.060 & 12.624\tabularnewline
-A & PUT & 4096 & 1 & 11 & 0.411 & 0.411 & 0.003 & 81.678\tabularnewline
-A & PUT & 4096 & 4 & 11 & 1.324 & 1.382 & 0.146 & 25.681\tabularnewline
-A & PUT & 4096 & 8 & 11 & 2.543 & 2.565 & 0.270 & 13.358\tabularnewline
-B & GET & 32 & 1 & 11 & 0.185 & 0.185 & 0.001 & 1.419\tabularnewline
-B & GET & 32 & 4 & 11 & 0.202 & 0.203 & 0.007 & 1.299\tabularnewline
-B & GET & 32 & 8 & 11 & 0.219 & 0.219 & 0.017 & 1.203\tabularnewline
-B & GET & 256 & 1 & 11 & 0.379 & 0.379 & 0.001 & 5.535\tabularnewline
-B & GET & 256 & 4 & 11 & 0.579 & 0.587 & 0.064 & 3.664\tabularnewline
-B & GET & 256 & 8 & 11 & 0.910 & 0.942 & 0.104 & 2.339\tabularnewline
-B & GET & 1024 & 1 & 11 & 0.708 & 0.707 & 0.002 & 11.856\tabularnewline
-B & GET & 1024 & 4 & 11 & 1.765 & 1.801 & 0.244 & 4.846\tabularnewline
-B & GET & 1024 & 8 & 11 & 3.275 & 3.274 & 0.356 & 2.594\tabularnewline
-B & GET & 4096 & 1 & 11 & 2.024 & 2.024 & 0.001 & 16.582\tabularnewline
-B & GET & 4096 & 4 & 11 & 6.626 & 7.101 & 0.734 & 5.134\tabularnewline
-B & GET & 4096 & 8 & 11 & 13.030 & 13.697 & 1.211 & 2.599\tabularnewline
-B & PUT & 32 & 1 & 11 & 0.245 & 0.245 & 0.001 & 1.071\tabularnewline
-B & PUT & 32 & 4 & 11 & 0.261 & 0.262 & 0.007 & 1.005\tabularnewline
-B & PUT & 32 & 8 & 11 & 0.277 & 0.278 & 0.017 & 0.949\tabularnewline
-B & PUT & 256 & 1 & 11 & 0.439 & 0.439 & 0.001 & 4.773\tabularnewline
-B & PUT & 256 & 4 & 11 & 0.632 & 0.628 & 0.039 & 3.331\tabularnewline
-B & PUT & 256 & 8 & 11 & 0.959 & 0.999 & 0.104 & 2.215\tabularnewline
-B & PUT & 1024 & 1 & 11 & 0.768 & 0.768 & 0.002 & 10.917\tabularnewline
-B & PUT & 1024 & 4 & 11 & 1.821 & 1.831 & 0.203 & 4.668\tabularnewline
-B & PUT & 1024 & 8 & 11 & 3.404 & 3.597 & 0.320 & 2.487\tabularnewline
-B & PUT & 4096 & 1 & 11 & 2.102 & 2.085 & 0.055 & 15.970\tabularnewline
-B & PUT & 4096 & 4 & 11 & 6.380 & 6.495 & 0.876 & 5.364\tabularnewline
-B & PUT & 4096 & 8 & 11 & 13.422 & 13.787 & 0.776 & 2.509\tabularnewline
-\bottomrule
-\end{longtable}
+Para objetos grandes, aumentar a concorrência de quatro para oito clientes
+elevou o tempo individual com pouco ganho agregado. A análise usa rodadas
+para estimar incerteza. Fontes, dados e evidências estão organizados para
+reprodução, conforme as instruções dos READMEs.
 
 \bibliographystyle{sbc}
 \bibliography{referencias}
