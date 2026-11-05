@@ -1,0 +1,17 @@
+LISTEN port=8080 workers=8
+ACCEPT worker=7
+ACCEPT worker=6
+ACCEPT worker=5
+ACCEPT worker=4
+ACCEPT worker=2
+ACCEPT worker=1
+ACCEPT worker=0
+ACCEPT worker=3
+ACCEPT worker=6
+ACCEPT worker=7
+ACCEPT worker=5
+ACCEPT worker=4
+ACCEPT worker=1
+ACCEPT worker=0
+ACCEPT worker=2
+ACCEPT worker=3

@@ -1,0 +1,5 @@
+# Mantém os bytes originais dos dados e das evidências, inclusive CRLF.
+*.csv -text -whitespace
+parte1/evidencias/** -text -whitespace
+parte2/evidencias/** -text -whitespace
+*.tar.gz -text

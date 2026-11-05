@@ -1,0 +1,10 @@
+{
+  "rounds": 528,
+  "observations": 2288,
+  "configs": 48,
+  "repetitions": 11,
+  "status": "all ok",
+  "integrity": "all SHA-256 match",
+  "concurrency": "all simultaneous intervals overlap",
+  "resume": "original first two attempts appear exactly once"
+}

@@ -1,0 +1,13 @@
+{
+  "planned_rounds": 528,
+  "completed_rounds": 528,
+  "observations": 2288,
+  "successes": 2288,
+  "statuses": {
+    "ok": 2288
+  },
+  "excluded_rows": 0,
+  "complete_configs": 48,
+  "max_launch_skew_ms": 2.0382309999149584,
+  "min_concurrent_overlap_ms": 33.31282299950544
+}

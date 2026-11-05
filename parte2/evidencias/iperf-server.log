@@ -1,0 +1,66 @@
+-----------------------------------------------------------
+Server listening on 5201 (test #1)
+-----------------------------------------------------------
+Accepted connection from 10.10.0.10, port 35090
+[  5] local 10.30.0.10 port 5201 connected to 10.10.0.10 port 35094
+[ ID] Interval           Transfer     Bitrate
+[  5]   0.00-1.00   sec  11.0 MBytes  92.2 Mbits/sec                  (omitted)
+[  5]   0.00-1.00   sec  11.4 MBytes  95.3 Mbits/sec                  
+[  5]   1.00-2.00   sec  11.4 MBytes  95.4 Mbits/sec                  
+[  5]   2.00-3.00   sec  11.4 MBytes  95.4 Mbits/sec                  
+[  5]   3.00-4.00   sec  11.4 MBytes  95.4 Mbits/sec                  
+[  5]   4.00-5.00   sec  11.4 MBytes  95.4 Mbits/sec                  
+[  5]   5.00-5.03   sec   256 KBytes  84.9 Mbits/sec                  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate
+[  5]   0.00-5.03   sec  57.1 MBytes  95.3 Mbits/sec                  receiver
+-----------------------------------------------------------
+Server listening on 5201 (test #2)
+-----------------------------------------------------------
+Accepted connection from 10.10.0.10, port 37520
+[  5] local 10.30.0.10 port 5201 connected to 10.10.0.10 port 37528
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  5]   0.00-1.00   sec  11.4 MBytes  95.3 Mbits/sec    0    320 KBytes       (omitted)
+[  5]   0.00-1.00   sec  11.4 MBytes  95.3 Mbits/sec    0    320 KBytes       
+[  5]   1.00-2.00   sec  11.4 MBytes  95.4 Mbits/sec    0    320 KBytes       
+[  5]   2.00-3.00   sec  11.4 MBytes  95.4 Mbits/sec    0    320 KBytes       
+[  5]   3.00-4.00   sec  11.2 MBytes  94.4 Mbits/sec    0    320 KBytes       
+[  5]   4.00-5.00   sec  11.2 MBytes  94.4 Mbits/sec    0    320 KBytes       
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  5]   0.00-5.01   sec  56.6 MBytes  94.8 Mbits/sec    0            sender
+-----------------------------------------------------------
+Server listening on 5201 (test #3)
+-----------------------------------------------------------
+Accepted connection from 10.10.0.10, port 54994
+[  5] local 10.30.0.10 port 5201 connected to 10.10.0.10 port 55008
+[ ID] Interval           Transfer     Bitrate
+[  5]   0.00-1.00   sec  1.75 MBytes  14.7 Mbits/sec                  (omitted)
+[  5]   0.00-1.00   sec  2.25 MBytes  18.9 Mbits/sec                  
+[  5]   1.00-2.00   sec  2.38 MBytes  19.9 Mbits/sec                  
+[  5]   2.00-3.00   sec  2.25 MBytes  18.9 Mbits/sec                  
+[  5]   3.00-4.00   sec  2.25 MBytes  18.9 Mbits/sec                  
+[  5]   4.00-5.00   sec  2.25 MBytes  18.9 Mbits/sec                  
+[  5]   5.00-5.13   sec   384 KBytes  23.9 Mbits/sec                  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate
+[  5]   0.00-5.13   sec  11.8 MBytes  19.2 Mbits/sec                  receiver
+-----------------------------------------------------------
+Server listening on 5201 (test #4)
+-----------------------------------------------------------
+Accepted connection from 10.10.0.10, port 55016
+[  5] local 10.30.0.10 port 5201 connected to 10.10.0.10 port 55018
+[ ID] Interval           Transfer     Bitrate         Retr  Cwnd
+[  5]   0.00-1.00   sec  2.00 MBytes  16.8 Mbits/sec    0    284 KBytes       (omitted)
+[  5]   0.00-1.00   sec  2.25 MBytes  18.9 Mbits/sec    0    321 KBytes       
+[  5]   1.00-2.00   sec  2.50 MBytes  21.0 Mbits/sec    0    321 KBytes       
+[  5]   2.00-3.00   sec  2.25 MBytes  18.9 Mbits/sec    0    321 KBytes       
+[  5]   3.00-4.00   sec  2.25 MBytes  18.9 Mbits/sec    0    321 KBytes       
+[  5]   4.00-5.00   sec  2.25 MBytes  18.9 Mbits/sec    0    321 KBytes       
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Retr
+[  5]   0.00-5.06   sec  11.5 MBytes  19.1 Mbits/sec    0            sender
+iperf3: interrupt - the server has terminated by signal Terminated(15)
+-----------------------------------------------------------
+Server listening on 5201 (test #5)
+-----------------------------------------------------------
