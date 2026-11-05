@@ -1,0 +1,8 @@
+{
+ "A": {"bandwidth_mbps": 100, "one_way_delay_ms": 5, "nominal_rtt_ms": 10},
+ "B": {"bandwidth_mbps": 20, "one_way_delay_ms": 30, "nominal_rtt_ms": 60},
+ "queue": {"root": "HTB", "burst": "16k", "child": "netem", "limit_packets": 10000, "artificial_loss_percent": 0},
+ "bottleneck_egress": ["roteador1:eth1", "roteador2:eth0"],
+ "subnets": {"client_access": "10.10.0.0/24", "core": "10.20.0.0/24", "server_access": "10.30.0.0/24"},
+ "server": "10.30.0.10:8080", "workers": 8, "tcp_congestion_control": "cubic", "offloads": "TSO/GSO/GRO disabled"
+}

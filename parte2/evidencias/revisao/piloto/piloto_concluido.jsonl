@@ -1,0 +1,4 @@
+{"round_id": "pilot-A-GET", "attempt": "32c3ebd1406e", "clients": 4, "all_ok": true}
+{"round_id": "pilot-A-PUT", "attempt": "41679a39456a", "clients": 4, "all_ok": true}
+{"round_id": "pilot-B-GET", "attempt": "62a82f6e1b27", "clients": 4, "all_ok": true}
+{"round_id": "pilot-B-PUT", "attempt": "c82131a1f515", "clients": 4, "all_ok": true}

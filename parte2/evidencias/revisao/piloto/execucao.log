@@ -1,0 +1,209 @@
+make: Entering directory '/tmp/redest1-revisao-1793901439379343479/parte1'
+mkdir -p build
+gcc -O2 -g -std=c11 -Wall -Wextra -Wpedantic -Werror -D_FILE_OFFSET_BITS=64 -fopenmp src/tcp_server.c -o build/server
+gcc -O2 -g -std=c11 -Wall -Wextra -Wpedantic -Werror -D_FILE_OFFSET_BITS=64 src/tcp_client.c -o build/client
+make: Leaving directory '/tmp/redest1-revisao-1793901439379343479/parte1'
+1c0d0fb02c52626111d6e132db80edfbf27bbaff8bd9245df2a371dcb0b35a92  tools/iperf-3.22.tar.gz
+checking for a BSD-compatible install... /usr/bin/install -c
+checking whether sleep supports fractional seconds... yes
+checking filesystem timestamp resolution... 0.01
+checking whether build environment is sane... yes
+checking for a race-free mkdir -p... /usr/bin/mkdir -p
+checking for gawk... gawk
+checking whether make sets $(MAKE)... yes
+checking whether make supports nested variables... yes
+checking xargs -n works... yes
+checking whether UID '0' is supported by ustar format... yes
+checking whether GID '0' is supported by ustar format... yes
+checking how to create a ustar tar archive... gnutar
+checking build system type... x86_64-pc-linux-gnu
+checking host system type... x86_64-pc-linux-gnu
+checking how to print strings... printf
+checking whether make supports the include directive... yes (GNU style)
+checking for gcc... gcc
+checking whether the C compiler works... yes
+checking for C compiler default output file name... a.out
+checking for suffix of executables... 
+checking whether we are cross compiling... no
+checking for suffix of object files... o
+checking whether the compiler supports GNU C... yes
+checking whether gcc accepts -g... yes
+checking for gcc option to enable C23 features... unsupported
+checking for gcc option to enable C11 features... none needed
+checking whether gcc understands -c and -o together... yes
+checking dependency style of gcc... gcc3
+checking for a sed that does not truncate output... /usr/bin/sed
+checking for grep that handles long lines and -e... /usr/bin/grep
+checking for egrep... /usr/bin/grep -E
+checking for fgrep... /usr/bin/grep -F
+checking for ld used by gcc... /usr/bin/ld
+checking if the linker (/usr/bin/ld) is GNU ld... yes
+checking for BSD- or MS-compatible name lister (nm)... /usr/bin/nm -B
+checking the name lister (/usr/bin/nm -B) interface... BSD nm
+checking whether ln -s works... yes
+checking the maximum length of command line arguments... 1572864
+checking how to convert x86_64-pc-linux-gnu file names to x86_64-pc-linux-gnu format... func_convert_file_noop
+checking how to convert x86_64-pc-linux-gnu file names to toolchain format... func_convert_file_noop
+checking for /usr/bin/ld option to reload object files... -r
+checking for file... file
+checking for objdump... objdump
+checking how to recognize dependent libraries... pass_all
+checking for dlltool... no
+checking how to associate runtime and link libraries... printf %s\n
+checking for ranlib... ranlib
+checking for ar... ar
+checking for archiver @FILE support... @
+checking for strip... strip
+checking command to parse /usr/bin/nm -B output from gcc object... ok
+checking for sysroot... no
+checking for a working dd... /usr/bin/dd
+checking how to truncate binary pipes... /usr/bin/dd bs=4096 count=1
+checking for mt... no
+checking if : is a manifest tool... no
+checking for stdio.h... yes
+checking for stdlib.h... yes
+checking for string.h... yes
+checking for inttypes.h... yes
+checking for stdint.h... yes
+checking for strings.h... yes
+checking for sys/stat.h... yes
+checking for sys/types.h... yes
+checking for unistd.h... yes
+checking for dlfcn.h... yes
+checking which variant of shared library versioning to provide... (default) aix
+checking for objdir... .libs
+checking if gcc supports -fno-rtti -fno-exceptions... no
+checking for gcc option to produce PIC... -fPIC -DPIC
+checking if gcc PIC flag -fPIC -DPIC works... yes
+checking if gcc static flag -static works... yes
+checking if gcc supports -c -o file.o... yes
+checking if gcc supports -c -o file.o... (cached) yes
+checking whether the gcc linker (/usr/bin/ld -m elf_x86_64) supports shared libraries... yes
+checking dynamic linker characteristics... GNU/Linux ld.so
+checking how to hardcode library paths into programs... immediate
+checking whether stripping libraries is possible... yes
+checking if libtool supports shared libraries... yes
+checking whether to build shared libraries... no
+checking whether to build static libraries... yes
+checking whether to enable maintainer-specific portions of Makefiles... no
+checking for gcc... (cached) gcc
+checking whether the compiler supports GNU C... (cached) yes
+checking whether gcc accepts -g... (cached) yes
+checking for gcc option to enable C23 features... (cached) unsupported
+checking for gcc option to enable C11 features... (cached) none needed
+checking whether gcc understands -c and -o together... (cached) yes
+checking dependency style of gcc... (cached) gcc3
+checking whether ln -s works... yes
+checking for ldconfig... ldconfig
+checking for library containing floor... -lm
+checking for library containing socket... none required
+checking for library containing inet_ntop... none required
+checking for an ANSI C-conforming const... yes
+checking how to run the C preprocessor... gcc -E
+checking for egrep -e... (cached) /usr/bin/grep -E
+checking whether gcc is Clang... no
+checking whether pthreads work with "-pthread" and "-lpthread"... yes
+checking for joinable pthread attribute... PTHREAD_CREATE_JOINABLE
+checking whether more special flags are required for pthreads... no
+checking for PTHREAD_PRIO_INHERIT... yes
+checking for stdatomic.h... yes
+checking whether libatomic is required... no
+checking for poll.h... yes
+checking for linux/tcp.h... yes
+checking for sys/socket.h... yes
+checking for netinet/sctp.h... no
+checking for endian.h... yes
+checking TCP_CONGESTION socket option... configure: WARNING: Building without OpenSSL; disabling iperf_auth functionality. 
+yes
+checking TCP_USER_TIMEOUT socket option... yes
+checking TCP_KEEPIDLE socket option... yes
+checking IPv6 flowlabel support... yes
+checking for cpuset_setaffinity... no
+checking for sched_setaffinity... yes
+checking for SetProcessAffinityMask... no
+checking for daemon... yes
+checking for sendfile... yes
+checking for getline... yes
+checking SO_MAX_PACING_RATE socket option... yes
+checking SO_BINDTODEVICE socket option... yes
+checking IP_BOUND_IF socket option... no
+checking IP_MTU_DISCOVER socket option... yes
+checking IP_DONTFRAG socket option... no
+checking IP_DONTFRAGMENT socket option... no
+checking any kind of DF socket option... yes
+checking for struct tcp_info.tcpi_snd_wnd... yes
+checking MSG_TRUNC recv option... yes
+checking MPTCP protocol... yes
+checking UDP_SEGMENT socket option... yes
+checking UDP_GRO socket option... yes
+checking SHUT_WR socket shutdown option... yes
+checking for library containing clock_gettime... none required
+checking for clock_gettime... yes
+checking for library containing nanosleep... none required
+checking for nanosleep... yes
+checking for library containing clock_nanosleep... none required
+checking for clock_nanosleep... yes
+checking that generated files are newer than configure... done
+configure: creating ./config.status
+config.status: creating Makefile
+config.status: creating src/Makefile
+config.status: creating src/version.h
+config.status: creating examples/Makefile
+config.status: creating iperf3.spec
+config.status: creating src/iperf_config.h
+config.status: executing depfiles commands
+config.status: executing libtool commands
+Making all in src
+make[1]: Entering directory '/tmp/redest1-revisao-1793901439379343479/parte2/tools/iperf-3.22/src'
+make  all-am
+make[2]: Entering directory '/tmp/redest1-revisao-1793901439379343479/parte2/tools/iperf-3.22/src'
+  CC       iperf3-main.o
+  CC       cjson.lo
+  CC       iperf_api.lo
+  CC       iperf_error.lo
+  CC       iperf_auth.lo
+  CC       iperf_client_api.lo
+  CC       iperf_locale.lo
+  CC       iperf_server_api.lo
+  CC       iperf_tcp.lo
+  CC       iperf_udp.lo
+  CC       iperf_sctp.lo
+  CC       iperf_util.lo
+  CC       iperf_time.lo
+  CC       iperf_pthread.lo
+  CC       dscp.lo
+  CC       net.lo
+  CC       tcp_info.lo
+  CC       timer.lo
+  CC       units.lo
+  CC       t_timer-t_timer.o
+  CC       t_units-t_units.o
+  CC       t_uuid-t_uuid.o
+  CC       t_api-t_api.o
+  CC       t_auth-t_auth.o
+  CCLD     libiperf.la
+  CCLD     iperf3
+  CCLD     t_timer
+  CCLD     t_units
+  CCLD     t_uuid
+  CCLD     t_api
+  CCLD     t_auth
+make[2]: Leaving directory '/tmp/redest1-revisao-1793901439379343479/parte2/tools/iperf-3.22/src'
+make[1]: Leaving directory '/tmp/redest1-revisao-1793901439379343479/parte2/tools/iperf-3.22/src'
+Making all in examples
+make[1]: Entering directory '/tmp/redest1-revisao-1793901439379343479/parte2/tools/iperf-3.22/examples'
+  CC       mic-mic.o
+  CC       mis-mis.o
+  CCLD     mic
+  CCLD     mis
+make[1]: Leaving directory '/tmp/redest1-revisao-1793901439379343479/parte2/tools/iperf-3.22/examples'
+make[1]: Entering directory '/tmp/redest1-revisao-1793901439379343479/parte2/tools/iperf-3.22'
+make[1]: Nothing to be done for 'all-am'.
+make[1]: Leaving directory '/tmp/redest1-revisao-1793901439379343479/parte2/tools/iperf-3.22'
+iperf 3.22 (cJSON 1.7.15)
+Linux b6b969c6a89b 6.18.33.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun 18 21:54:43 UTC 2026 x86_64
+Optional features available: CPU affinity setting, IPv6 flow label, TCP congestion algorithm setting, sendfile / zerocopy, socket pacing, bind to device, support IPv4 don't fragment, POSIX threads, GSO/GRO support
+{"round_id": "pilot-A-GET", "attempt": "32c3ebd1406e", "clients": 4, "all_ok": true, "network": "A", "operation": "GET", "size": 262144, "duration": 0.11836633799975971, "skew_ms": 0.1551060004203464}
+{"round_id": "pilot-A-PUT", "attempt": "41679a39456a", "clients": 4, "all_ok": true, "network": "A", "operation": "PUT", "size": 262144, "duration": 0.12526629700096237, "skew_ms": 0.14150200058793416}
+{"round_id": "pilot-B-GET", "attempt": "62a82f6e1b27", "clients": 4, "all_ok": true, "network": "B", "operation": "GET", "size": 262144, "duration": 0.6873037670002304, "skew_ms": 0.19049700040341122}
+{"round_id": "pilot-B-PUT", "attempt": "c82131a1f515", "clients": 4, "all_ok": true, "network": "B", "operation": "PUT", "size": 262144, "duration": 0.6802361160007422, "skew_ms": 0.0682500003676978}

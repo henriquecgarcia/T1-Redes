@@ -1,0 +1,8 @@
+test_ci_uses_rounds (__main__.AnalysisTests) ... ok
+test_complete_committed_attempt_only (__main__.AnalysisTests) ... ok
+test_one_round_no_ci (__main__.AnalysisTests) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.004s
+
+OK
