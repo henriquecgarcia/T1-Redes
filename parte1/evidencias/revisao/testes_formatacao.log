@@ -1,0 +1,26 @@
+test_01_binary_sizes_and_overwrite (__main__.TransferTests) ... SHA256 size=0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+SHA256 size=1 9e8e8c37a53bac77a653d590b783b2508e8ed2fed040a278bf4f4703bbd5d82d
+SHA256 size=1023 e645c8104e27f6a1ff598b4692e60f9588193e9c0595e01cf40040e721ed2764
+SHA256 size=1024 6acf92eb217bbbaccdcde6cca8d5f8e5bb9195024f35410c854e7e4a569c6492
+SHA256 size=4096 cfc42311bf531f385092a56c25cbe5347cdfba56d0763262c2e4b61a36736f4d
+SHA256 size=32768 36eea7cdd12cfd1516b81aec81fe861c6b0271f9fea5af8480b8eee157ccbdf0
+SHA256 size=262144 e46ba6388c741c2ff488931cc112b8491b1f4efaf38b0e53d69c2cae45706ce1
+SHA256 size=1048576 ac260c3ff9eb5d95add0db46ec1dbb16638ff1ef77bcffda76dd5f777d853970
+SHA256 size=4194304 fa4fc5e0bbf2f00cb895ef6f1b314e685b74fd8620297581db74da980f2bd533
+ok
+test_02_fragmented_and_pipelined (__main__.TransferTests) ... ok
+test_03_aborted_put_preserves_old (__main__.TransferTests) ... ok
+test_04_eight_simultaneous_workers (__main__.TransferTests) ... ok
+test_05_concurrent_same_name (__main__.TransferTests) ... ok
+test_06_invalid_and_missing (__main__.TransferTests) ... ok
+test_07_nonregular_and_symlink (__main__.TransferTests) ... ok
+test_08_get_snapshot_during_put (__main__.TransferTests) ... ok
+test_09_truncated_get_preserves_destination (__main__.TransferTests) ... ok
+test_10_long_header_disconnect_and_recovery (__main__.TransferTests) ... ok
+test_11_idle_timeout_releases_worker (__main__.TransferTests) ... IDLE_TIMEOUT seconds=15.035
+ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 15.500s
+
+OK
