@@ -1,0 +1,16 @@
+root = true
+
+[*.{c,h,py,sh,tex}]
+indent_style = tab
+indent_size = tab
+tab_width = 4
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+[Makefile]
+indent_style = tab
+tab_width = 4
+
+[*.{csv,json,jsonl,sty,bst}]
+# Dados e arquivos oficiais mantêm seu formato original.
+trim_trailing_whitespace = false

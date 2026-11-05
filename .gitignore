@@ -1,0 +1,24 @@
+# Compilação, ambiente local e caches.
+.venv/
+**/build/
+**/__pycache__/
+*.pyc
+*.o
+*.so
+
+# Dados locais de novas execuções e ferramentas reconstruíveis.
+parte1/dados_servidor/
+parte2/data/
+parte2/tools/iperf-3.22/
+parte2/tools/iperf3
+
+# Auxiliares LaTeX; o PDF final e os gráficos fazem parte da entrega.
+*.aux
+*.toc
+*.out
+*.bbl
+*.blg
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+parte2/relatorio_final.log
