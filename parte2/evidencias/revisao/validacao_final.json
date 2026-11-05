@@ -1,0 +1,18 @@
+{
+  "fontes_com_tabs": 27,
+  "linhas_acima_de_100": 0,
+  "testes_tcp_normais": 11,
+  "testes_tcp_io_parcial": 11,
+  "testes_analise": 3,
+  "piloto_revisao_rodadas": 4,
+  "piloto_revisao_transferencias": 16,
+  "rodadas_principais": 528,
+  "transferencias_principais": 2288,
+  "arquivos_preservados": 93,
+  "pdf_paginas": 10,
+  "latex_erros": 0,
+  "latex_overfull": 0,
+  "referencias_indefinidas": 0,
+  "avisos_underfull_vbox": 0,
+  "pdf_sha256": "ee0b29e95a7e6eb836d2172bcd7216eece718588eca27ff32fcee06cea663119"
+}
