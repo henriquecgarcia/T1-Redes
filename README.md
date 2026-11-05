@@ -60,6 +60,7 @@ O destino anterior só é substituído depois da transferência completa.
 ```bash
 bash parte1/scripts/verify.sh
 python3 parte2/tests/test_analysis.py
+python3 parte2/tests/test_preservation.py
 python3 parte2/scripts/check_outputs.py
 ```
 

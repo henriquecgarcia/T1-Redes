@@ -4,7 +4,7 @@ Henrique Campanha Garcia — henrique.garcia@unifesp.br
 
 Loren Pena Rodriguez Lorenzetto — rafael.lorenzetto@unifesp.br
 
-Universidade Federal de São Paulo (UNIFESP)
+Instituto de Ciência e Tecnologia (ICT) — Universidade Federal de São Paulo (UNIFESP)
 
 **Abstract.** This paper presents a C/Linux TCP file-transfer service and its evaluation using the CORE emulator. GET and PUT are tested with four file sizes, two network profiles and up to eight concurrent clients. The experiment completed 528 rounds and 2,288 transfers with matching SHA-256 hashes. Confidence intervals use rounds as the sampling unit. Large files approached the shared link capacity while response times increased with concurrency.
 

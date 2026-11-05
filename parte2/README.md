@@ -77,6 +77,7 @@ campanhas no mesmo diretório Docker.
 ```bash
 python3 parte2/scripts/check_outputs.py
 python3 parte2/tests/test_analysis.py
+python3 parte2/tests/test_preservation.py
 mkdir -p parte2/build/analise/evidencias
 cp parte2/{resultados_brutos.csv,resultados_resumidos.csv,matriz_experimental.csv} \
   parte2/build/analise/
