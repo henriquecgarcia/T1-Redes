@@ -3,3 +3,7 @@
 parte1/evidencias/** -text -whitespace
 parte2/evidencias/** -text -whitespace
 *.tar.gz -text
+
+# Arquivos oficiais SBC são mantidos exatamente como distribuídos.
+relatorio/sbc-template.sty -text -whitespace
+relatorio/sbc.bst -text -whitespace
