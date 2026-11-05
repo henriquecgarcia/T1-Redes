@@ -1,0 +1,3 @@
+mkdir -p build
+gcc -O2 -g -std=c11 -Wall -Wextra -Wpedantic -Werror -D_FILE_OFFSET_BITS=64 -fopenmp src/tcp_server.c -o build/server
+gcc -O2 -g -std=c11 -Wall -Wextra -Wpedantic -Werror -D_FILE_OFFSET_BITS=64 src/tcp_client.c -o build/client

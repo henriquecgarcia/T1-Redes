@@ -9,4 +9,4 @@ build/server: src/tcp_server.c src/protocol.h | build
 build/client: src/tcp_client.c src/protocol.h | build
 	$(CC) $(CFLAGS) $< -o $@
 test: all
-	python3 scripts/test_transfer.py
+	python3 tests/test_transfer.py

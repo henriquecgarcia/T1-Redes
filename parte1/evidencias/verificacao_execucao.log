@@ -1,0 +1,55 @@
+mkdir -p build
+gcc -O2 -g -std=c11 -Wall -Wextra -Wpedantic -Werror -D_FILE_OFFSET_BITS=64 -fopenmp src/tcp_server.c -o build/server
+gcc -O2 -g -std=c11 -Wall -Wextra -Wpedantic -Werror -D_FILE_OFFSET_BITS=64 src/tcp_client.c -o build/client
+test_01_binary_sizes_and_overwrite (__main__.TransferTests) ... SHA256 size=0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+SHA256 size=1 3f39d5c348e5b79d06e842c114e6cc571583bbf44e4b0ebfda1a01ec05745d43
+SHA256 size=1023 df2a835639907873ccffa226c7fc800f718eb11c41e4a62ab1ea18ebdbd19fe1
+SHA256 size=1024 567818289b5df9e0450133c36b0f01d1791d24f946a78f9d60bf89c05ebba672
+SHA256 size=4096 62d11ffd751eaac603961598ec4d6d55bfb22ee8654c4743b30dd459a4987aee
+SHA256 size=32768 50152b501b4b8b94a400b5930e730fd31c73ae6263782f1bcc2b2575cf9416d0
+SHA256 size=262144 543cc19a9ca6bbd8bcb6863fd9413ec72697546acc349d9dc388c04e5e6ceed5
+SHA256 size=1048576 d7beb9c6e56eb341b2850f49b84dd9a61a1393378547b090cdbfe7bea824e297
+SHA256 size=4194304 b74c332ec282caf6c3d4ebb7d5a74177f4b55512c5e51e548b2ff35e1ef380cb
+ok
+test_02_fragmented_and_pipelined (__main__.TransferTests) ... ok
+test_03_aborted_put_preserves_old (__main__.TransferTests) ... ok
+test_04_eight_simultaneous_workers (__main__.TransferTests) ... ok
+test_05_concurrent_same_name (__main__.TransferTests) ... ok
+test_06_invalid_and_missing (__main__.TransferTests) ... ok
+test_07_nonregular_and_symlink (__main__.TransferTests) ... ok
+test_08_get_snapshot_during_put (__main__.TransferTests) ... ok
+test_09_truncated_get_preserves_destination (__main__.TransferTests) ... ok
+test_10_long_header_disconnect_and_recovery (__main__.TransferTests) ... ok
+test_11_idle_timeout_releases_worker (__main__.TransferTests) ... IDLE_TIMEOUT seconds=15.216
+ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 15.623s
+
+OK
+test_01_binary_sizes_and_overwrite (__main__.TransferTests) ... SHA256 size=0 e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+SHA256 size=1 fe1dcd3abfcd6b1655a026e60a05d03a7f71e4b6070f36e6c7e9c4b6f3d3bf1b
+SHA256 size=1023 416eb823f6453feb39979f3a324dc7f938ef391a17ed8a364ced5ad04e5b17d4
+SHA256 size=1024 f99499fdc9eee2f93926d9b9972740e7a087a23633b2bedb5c3ff75277f7d0bf
+SHA256 size=4096 12ce987eef15420b65473c67c17cbe1dbfd172e09a04881fec24564ec7eada25
+SHA256 size=32768 849555990e366ea926b9f9af968171a9822e071d739db20b12ad8ceff063f8a1
+SHA256 size=262144 9559a36dce9883e6a8ac074371859214c519c543224ae219198ab0d491d8ff7b
+SHA256 size=1048576 183d81e83932b20d75007fe4b0138ad63241dbb604fe8b5254b3aba47262c839
+SHA256 size=4194304 8761a9b0446ba8b5e4911d3a76cd286b9764e3b40045f907e3b854af700f8d66
+ok
+test_02_fragmented_and_pipelined (__main__.TransferTests) ... ok
+test_03_aborted_put_preserves_old (__main__.TransferTests) ... ok
+test_04_eight_simultaneous_workers (__main__.TransferTests) ... ok
+test_05_concurrent_same_name (__main__.TransferTests) ... ok
+test_06_invalid_and_missing (__main__.TransferTests) ... ok
+test_07_nonregular_and_symlink (__main__.TransferTests) ... ok
+test_08_get_snapshot_during_put (__main__.TransferTests) ... ok
+test_09_truncated_get_preserves_destination (__main__.TransferTests) ... ok
+test_10_long_header_disconnect_and_recovery (__main__.TransferTests) ... ok
+test_11_idle_timeout_releases_worker (__main__.TransferTests) ... IDLE_TIMEOUT seconds=15.023
+ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 15.420s
+
+OK
