@@ -6,10 +6,10 @@ Esta pasta contém somente o relatório e seus arquivos de apoio:
 - `relatorio_final.pdf`: versão compilada.
 - `relatorio_final.md`: versão complementar legível.
 - `autores.tex`: nomes, instituição e e-mails fornecidos/confirmados.
-- `referencias.bib` e `sbc.bst`: referências e estilo bibliográfico.
+- `referencias.bib` e `sbc.bst`: referências e estilo bibliográfico; o segundo recebeu um ajuste nos rótulos autor-ano.
 - `sbc-template.sty`: estilo SBC oficial, sem modificações.
 - `figuras/` e `tabelas/`: elementos usados no artigo.
-- `modelo_sbc/`: origem e hashes dos arquivos oficiais.
+- `modelo_sbc/`: origem e hashes dos arquivos SBC originais, anteriores ao ajuste em `sbc.bst`.
 
 A pasta é autossuficiente para compilar o artigo. No Ubuntu, são necessários
 TeX Live com os pacotes recomendados/extras, fontes recomendadas e suporte a português.
@@ -35,8 +35,10 @@ O Makefile mantém os intermediários em `build/` e copia o PDF final para esta 
 Pandoc não é necessário para compilar. O `.tex` é o fonte principal editável;
 o Markdown é uma cópia complementar e deve acompanhar revisões do texto.
 
-O estilo define papel, margens, fontes, títulos e legendas. Não edite o arquivo
-oficial para ajustar o artigo; a procedência está em `modelo_sbc/ORIGEM.md`.
+O pacote `sbc-template.sty` define papel, margens, fontes, títulos e legendas
+e permanece igual ao original. `sbc.bst` recebeu apenas o ajuste necessário
+para exibir citações como `(Autor, Ano)` e preservar anos como `s.d.`.
+A procedência está em `modelo_sbc/ORIGEM.md`.
 O enunciado da disciplina foi conferido e não impõe outro modelo de relatório.
 
 Os dados do artigo vêm dos CSV de `../parte2/`. As figuras de impressão e as

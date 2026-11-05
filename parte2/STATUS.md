@@ -14,7 +14,7 @@
 - [x] Scripts ativos com TABs reais e sintaxe validada.
 - [x] Piloto CORE reproduzido após a revisão, em diretório novo, com 16 sucessos.
 - [x] Gráficos originais, CSV, timestamps, hashes e logs preservados.
-- [x] Artigo separado em ../relatorio/, com template SBC original e PDF compilado.
+- [x] Artigo separado em ../relatorio/, com pacote SBC original, ajuste de citações em `sbc.bst` e PDF compilado.
 - [x] Autores e instituição preenchidos com dados fornecidos/confirmados.
 - [x] Enunciado e guia preservados em ../materiais/.
 - [x] Parte 3 não implementada.

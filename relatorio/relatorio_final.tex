@@ -9,6 +9,11 @@
 \usepackage{amsmath,amssymb,booktabs}
 \usepackage[hidelinks]{hyperref}
 
+% Citações autor-ano: (Autor, Ano), conforme os rótulos de sbc.bst.
+\makeatletter
+\renewcommand{\@cite}[2]{(#1\if@tempswa, #2\fi)}
+\makeatother
+
 \hypersetup{
 	pdftitle={Transferência de arquivos via TCP e avaliação de desempenho no emulador CORE},
 	pdfauthor={Henrique Campanha Garcia; Loren Pena Rodriguez Lorenzetto}
@@ -22,23 +27,11 @@
 \maketitle
 
 \begin{abstract}
-	This paper presents a C/Linux TCP file-transfer service and its evaluation
-	using the CORE emulator. GET and PUT are tested with four file sizes,
-	two network profiles and up to eight concurrent clients. The experiment
-	completed 528 rounds and 2,288 transfers with matching SHA-256 hashes.
-	Confidence intervals use rounds as the sampling unit. Large files
-	approached the shared link capacity while response times increased
-	with concurrency.
+	This paper presents a C/Linux TCP file-transfer service and its evaluation using the CORE emulator. GET and PUT are tested with four file sizes, two network profiles and up to eight concurrent clients. The experiment completed 528 rounds and 2,288 transfers with matching SHA-256 hashes. Confidence intervals use rounds as the sampling unit. Large files approached the shared link capacity while response times increased with concurrency.
 \end{abstract}
 
 \begin{resumo}
-	Este artigo apresenta um serviço de transferência de arquivos em C/Linux
-	e sua avaliação no emulador CORE. GET e PUT foram avaliados com quatro
-	tamanhos de arquivo, dois perfis de rede e até oito clientes simultâneos.
-	Foram concluídas 528 rodadas e 2288 transferências com SHA-256 correto.
-	Os intervalos de confiança usam a rodada como unidade amostral.
-	Arquivos grandes se aproximaram da capacidade do enlace compartilhado,
-	enquanto o tempo de resposta aumentou com a concorrência.
+	Este artigo apresenta um serviço de transferência de arquivos em C/Linux e sua avaliação no emulador CORE. GET e PUT foram avaliados com quatro tamanhos de arquivo, dois perfis de rede e até oito clientes simultâneos. Foram concluídas 528 rodadas e 2288 transferências com SHA-256 correto. Os intervalos de confiança usam a rodada como unidade amostral. Arquivos grandes se aproximaram da capacidade do enlace compartilhado, enquanto o tempo de resposta aumentou com a concorrência.
 \end{resumo}
 
 % ==========================================================
@@ -48,128 +41,74 @@
 \section{Introdução}
 \label{sec:introducao}
 
-TCP oferece um fluxo confiável de bytes, mas não preserva os limites das
-mensagens da aplicação \cite{tcp}. Um serviço de transferência precisa,
-portanto, definir comandos, tamanho do conteúdo e critérios de conclusão.
-Também precisa tratar operações parciais de socket e impedir que falhas de
-uma conexão comprometam os demais clientes.
+A transferência de arquivos é uma das operações mais comuns em redes de computadores, sendo utilizada em diferentes aplicações que dependem da comunicação entre clientes e servidores. Para realizar essa comunicação, o protocolo \textit{Transmission Control Protocol} (TCP) oferece um fluxo confiável e ordenado de bytes. Entretanto, como o TCP não preserva os limites das mensagens enviadas pela aplicação, é necessário estabelecer um protocolo próprio para identificar comandos, delimitar os dados transmitidos e determinar o término de cada operação \cite{tcp}.
 
-Este trabalho reúne duas etapas: a implementação de um cliente e servidor
-em C/Linux, com atendimento concorrente via OpenMP, e uma avaliação de GET e
-PUT no emulador CORE. O objetivo é observar o efeito conjunto do tamanho de
-arquivo, da concorrência e de dois perfis de rede sobre o tempo de resposta
-e a vazão útil. A avaliação utiliza processos reais nos nós emulados e
-verificação de integridade para cada transferência.
+Além da comunicação, o atendimento simultâneo de múltiplos clientes representa um aspecto importante no desenvolvimento de servidores. À medida que o número de conexões aumenta, recursos como processamento, memória e capacidade de transmissão da rede passam a ser compartilhados, podendo afetar o desempenho das operações. Nesse contexto, técnicas de programação paralela, como o OpenMP, permitem organizar o processamento concorrente das requisições.
+
+Neste trabalho, foi desenvolvida uma aplicação cliente-servidor em linguagem C, utilizando sockets TCP no ambiente Linux. A aplicação implementa as operações GET e PUT, responsáveis, respectivamente, pelo recebimento e envio de arquivos, com suporte à transferência de dados binários e ao atendimento simultâneo de múltiplos clientes por meio do OpenMP.
+
+Após a implementação, foi realizada uma avaliação de desempenho utilizando o emulador de redes CORE. Os experimentos consideraram dois perfis de rede, quatro tamanhos de arquivo e diferentes níveis de concorrência, com até oito clientes simultâneos. Para cada configuração, foram analisados o tempo de resposta e a vazão útil das operações, além da integridade dos arquivos transferidos.
+
+O objetivo principal é avaliar como o tamanho dos arquivos, a quantidade de clientes concorrentes e as condições de vazão e latência da rede influenciam o desempenho da aplicação. Dessa forma, busca-se compreender o comportamento do serviço em diferentes condições de comunicação e identificar possíveis limitações relacionadas ao compartilhamento dos recursos disponíveis.
 
 % ==========================================================
 % 2. IMPLEMENTAÇÃO DO CLIENTE-SERVIDOR
 % ==========================================================
 
-\section{Implementação do cliente-servidor}
+\section{Implementação do Cliente-Servidor}
 \label{sec:implementacao}
 
-A referência funcional foi o par de fontes \texttt{tcp\_client.c} e
-\texttt{tcp\_server.c}. A auditoria identificou um contador de clientes
-acessado sem sincronização, truncamento do destino antes do fim de PUT,
-interferência entre gravações do mesmo nome e uma resposta de echo sem a
-quebra de linha esperada. Os originais foram preservados; a versão revisada
-mantém os comandos e corrige essas situações.
+A aplicação foi desenvolvida em C, utilizando sockets TCP para a comunicação entre cliente e servidor. O atendimento simultâneo de múltiplos clientes foi implementado com OpenMP. Durante a revisão do código, foram corrigidos problemas relacionados ao controle de conexões, à sobrescrita de arquivos e ao tratamento de respostas. Os arquivos originais foram preservados para comparação.
 
-\subsection{Protocolo e tratamento de erros}
+\subsection{Protocolo e Tratamento de Erros}
 
-Os comandos são linhas ASCII encerradas por LF. GET envia o nome remoto;
-o servidor responde com \texttt{OK tamanho} e exatamente a quantidade
-anunciada de bytes, ou com uma linha \texttt{ERR}. PUT envia nome e tamanho,
-aguarda \texttt{READY}, transmite o corpo e aguarda \texttt{OK}. O corpo
-pode conter qualquer byte, inclusive NUL e LF. O limite é 1 GiB por arquivo;
-nomes remotos são simples, sem caminhos ou espaços.
+Foi definido um protocolo simples baseado em comandos ASCII terminados por quebra de linha (\texttt{LF}). Na operação \texttt{GET}, o cliente solicita um arquivo e o servidor responde com \texttt{OK tamanho}, seguido dos dados, ou com \texttt{ERR} em caso de falha. No \texttt{PUT}, o cliente informa o nome e o tamanho do arquivo, aguarda a resposta \texttt{READY} e inicia a transferência, recebendo \texttt{OK} ao final.
 
-As rotinas de comunicação repetem \texttt{send} e \texttt{recv} até completar
-o tamanho esperado e tratam interrupções EINTR. A leitura do cabeçalho não
-consome o corpo seguinte. O uso de MSG\_NOSIGNAL evita terminar o servidor
-por SIGPIPE quando um cliente desconecta. Erros que comprometem o
-enquadramento encerram a conexão; o cliente retorna status não zero quando
-a operação falha. Há timeout de 15 segundos por espera de socket e limite
-para estabelecer a conexão.
+A aplicação suporta arquivos binários de até 1 GiB, utilizando nomes sem espaços ou caminhos de diretórios. As rotinas de comunicação tratam envios e recebimentos parciais, interrupções por \texttt{EINTR} e desconexões inesperadas. Também foram configurados timeouts de comunicação de 15 segundos para evitar bloqueios indefinidos.
 
-\subsection{Concorrência e sobrescrita}
+\subsection{Concorrência e Sobrescrita}
 
-O OpenMP \cite{openmp} mantém oito trabalhadores em uma região paralela,
-com ajuste dinâmico desativado. Cada trabalhador aceita e
-atende uma conexão por vez, sem contador compartilhado. Conexões adicionais
-podem aguardar no backlog, sujeito aos limites do kernel.
+O servidor utiliza OpenMP \cite{openmp} para atender até oito clientes simultaneamente. Cada conexão é processada separadamente, evitando interferência entre as operações. Quando a capacidade de atendimento é atingida, novas conexões podem aguardar na fila do sistema operacional.
 
-PUT grava em um temporário exclusivo no diretório de armazenamento. Após
-fechamento bem-sucedido, \texttt{rename} publica o arquivo completo,
-substituindo o destino existente. Em PUTs concorrentes para o mesmo nome,
-a última publicação concluída vence. GET mantém o descritor da versão que
-abriu; o cliente também grava o download em temporário antes de substituir
-o destino local. Assim, uma transferência interrompida preserva a versão
-anterior. A publicação é atômica durante a execução normal, sem garantia de
-durabilidade após queda de energia, pois não se usa fsync em arquivo e diretório.
+Para evitar a perda de arquivos durante transferências interrompidas, as operações \texttt{PUT} gravam os dados em arquivos temporários. Após o recebimento completo, o arquivo é renomeado para o destino, substituindo a versão anterior. O mesmo procedimento é utilizado pelo cliente durante o \texttt{GET}.
 
-\subsection{Verificação da implementação}
+Essa abordagem permite a substituição atômica dos arquivos durante a execução normal. Entretanto, não garante a persistência dos dados em caso de falha de energia, pois não utiliza \texttt{fsync()}.
 
-A compilação usa GCC, C11, OpenMP e avisos tratados como erros. Passaram
-11 testes de integração normais e os mesmos 11 com interposição de sockets,
-forçando envios de até 4093 bytes, recebimentos de até 257 bytes e EINTR
-periódico. A suíte cobre arquivos de 0 bytes a 4 MiB, GET/PUT, SHA-256,
-sobrescrita, cabeçalhos fragmentados, comandos encadeados, desconexões,
-download truncado, sintaxe inválida, arquivos não regulares e timeout ocioso.
+\subsection{Verificação da Implementação}
 
-A simultaneidade foi verificada obtendo oito respostas READY antes de
-enviar qualquer corpo. Também foram testados oito PUTs para o mesmo nome e
-GET durante um PUT. As verificações da revisão usam novos diretórios de
-saída, preservando os logs da execução original.
+A aplicação foi compilada com GCC, utilizando C11 e OpenMP. Foram executados 11 testes de integração, repetidos com uma camada de interposição de sockets para simular envios e recebimentos parciais e interrupções \texttt{EINTR}.
+
+Os testes incluíram arquivos de 0 bytes a 4 MiB, operações GET e PUT, sobrescrita, desconexões, comandos inválidos e verificação de integridade por SHA-256. A concorrência foi avaliada com oito clientes simultâneos, incluindo transferências para o mesmo destino.
+
+Todos os testes foram concluídos com sucesso, tanto na execução convencional quanto na execução com operações parciais simuladas.
 
 % ==========================================================
 % 3. AMBIENTE EXPERIMENTAL
 % ==========================================================
 
-\section{Ambiente experimental e topologia CORE}
+\section{Ambiente Experimental e Topologia CORE}
 \label{sec:ambiente}
 
-O CORE cria redes virtuais capazes de executar aplicações e protocolos
-reais sobre recursos do Linux \cite{core}. Foi utilizada a instalação
-existente do CORE 9.2.0 em um container Docker privilegiado, com Python 3.10.
-O host era Ubuntu 22.04/WSL2, com kernel
-6.18.33.2-microsoft-standard-WSL2. Os nós compartilham CPU, memória,
-armazenamento e kernel. A identificação da imagem e os detalhes do ambiente
-foram registrados nas evidências.
+Os experimentos foram realizados utilizando o emulador de redes CORE \cite{core}, versão 9.2.0, executado em um contêiner Docker sobre Ubuntu 22.04/WSL2. O ambiente utilizou Python 3.10, e os nós emulados compartilharam os recursos computacionais da máquina hospedeira.
 
-A Figura~\ref{fig:topologia} apresenta oito clientes, um servidor,
-dois roteadores Linux e três switches CORE. O acesso dos clientes usa
-10.10.0.0/24; o núcleo, 10.20.0.0/24; e o acesso do servidor, 10.30.0.0/24.
-O servidor atende em 10.30.0.10:8080. Os roteadores têm encaminhamento IP e
-rotas estáticas; clientes e servidor usam seus respectivos gateways de acesso.
+A topologia, apresentada na Figura~\ref{fig:topologia}, foi composta por oito clientes, um servidor, dois roteadores e três switches. Foram utilizadas três sub-redes: 10.10.0.0/24 para os clientes, 10.20.0.0/24 para o núcleo e 10.30.0.0/24 para o servidor, que atende na porta 8080. A comunicação entre as redes foi realizada por meio de roteamento estático.
 
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{figuras/topologia.pdf}
-	\caption{Topologia executada no CORE. O gargalo atua nas saídas R1:eth1
-		e R2:eth0, cobrindo os dois sentidos de transmissão.}
+	\caption{Topologia utilizada no CORE, com o enlace de gargalo entre os roteadores R1 e R2.}
 	\label{fig:topologia}
 \end{figure}
 
-\subsection{Perfis e validação da rede}
+\subsection{Perfis e Validação da Rede}
 
-Os acessos Ethernet não recebem limitação artificial adicional.
-Nas saídas dos roteadores para o núcleo, HTB limita taxa e teto, e netem
-aplica atraso fixo. O perfil A usa 100 Mbps e 5 ms por direção; B usa
-20 Mbps e 30 ms. Os RTT nominais são, respectivamente, 10 e 60 ms.
-São cenários propostos para o experimento, sem associação universal com
-uma tecnologia de acesso.
+Foram definidos dois perfis de rede, variando a vazão e a latência do enlace de gargalo. O perfil A foi configurado com 100 Mbps e 5 ms de atraso por direção, enquanto o perfil B utilizou 20 Mbps e 30 ms. Dessa forma, os RTTs nominais foram de 10 ms e 60 ms, respectivamente. Os valores foram escolhidos para representar diferentes condições de acesso, sem corresponder necessariamente a uma tecnologia específica.
 
-A configuração usa burst de 16 KiB e fila de 10000 pacotes, sem perda
-artificial. TSO, GSO e GRO foram desativados; o TCP usa CUBIC. Embora não
-haja descarte artificial, perdas por congestionamento continuam possíveis.
-Os parâmetros e os contadores de fila foram registrados.
+As limitações foram aplicadas utilizando HTB para controle de vazão e netem para configuração do atraso, sem introdução de perda artificial de pacotes. Também foram desativados os mecanismos TSO, GSO e GRO, mantendo o algoritmo de controle de congestionamento TCP CUBIC.
 
-A validação executou ping com dez pacotes, traceroute ICMP e iperf 3.22 nos
-dois sentidos \cite{iperf}. O iperf usou uma conexão TCP, cinco segundos
-medidos, um segundo omitido e janela solicitada de 256 KiB. Os resultados
-recebidos estão na Tabela~\ref{tab:validacao}. O traceroute confirmou a
-passagem por 10.10.0.1, 10.20.0.2 e 10.30.0.10; nenhum pacote do ping foi perdido.
+Para validar a configuração, foram realizados testes com ping, traceroute e iperf3 \cite{iperf}. O ping verificou o RTT entre cliente e servidor, enquanto o traceroute confirmou a passagem pelos roteadores intermediários. O iperf3 foi utilizado para medir a vazão nos dois sentidos, permitindo comparar os valores observados com os parâmetros configurados.
+
+Os resultados são apresentados na Tabela~\ref{tab:validacao}. Não foram observadas perdas nos testes de ping, e o traceroute confirmou o caminho esperado entre cliente e servidor.
 
 \input{tabelas/validacao}
 
@@ -180,197 +119,135 @@ passagem por 10.10.0.1, 10.20.0.2 e 10.30.0.10; nenhum pacote do ping foi perdid
 \section{Metodologia dos experimentos}
 \label{sec:metodologia}
 
-\subsection{Fatores e repetições}
+\subsection{Fatores e Repetições}
 
-Os objetos de 32 e 256 KiB representam tamanhos de miniaturas e imagens
-comprimidas de uma aplicação Web; 1 e 4 MiB representam anexos ou objetos de
-armazenamento em nuvem. São arquivos binários sintéticos determinísticos:
-o experimento compara custos de comunicação e transmissão, sem reproduzir
-HTTP, TLS, codecs ou distribuições reais de usuários.
+Foram utilizados quatro tamanhos de arquivos binários: 32 e 256 KiB, representando imagens de aplicações Web, e 1 e 4 MiB, representando anexos e arquivos de armazenamento em nuvem. Os arquivos foram gerados de forma determinística, permitindo a reprodução dos testes.
 
-A matriz fatorial cruza dois perfis, GET e PUT separadamente, quatro
-tamanhos e três concorrências: 1, 4 e 8 clientes. Cada configuração tem
-11 repetições, totalizando $2\times2\times4\times3\times11=528$ rodadas e
-2288 transferências individuais. Dentro de cada repetição, as 48 combinações
-foram embaralhadas com semente 20261105. O arquivo da matriz preserva a ordem.
+A matriz experimental considerou dois perfis de rede, duas operações (GET e PUT), quatro tamanhos de arquivo e três níveis de concorrência (1, 4 e 8 clientes). Cada configuração foi repetida 11 vezes, totalizando $2 \times 2 \times 4 \times 3 \times 11 = 528$ rodadas e 2288 transferências. A ordem foi embaralhada com a semente 20261105, reduzindo possíveis efeitos da sequência de execução.
 
-Um piloto anterior executou GET e PUT em A e B com 256 KiB e quatro
-clientes: quatro rodadas e 16 transferências corretas. Esse piloto,
-as validações e os testes de reprodução não entram na amostra principal.
-Não foram removidos outliers nem descartadas primeiras transferências da
-campanha. O cache de arquivos não foi limpo; os dados estavam previamente preparados.
+Antes da coleta principal, foram realizados testes piloto, que não foram incluídos na análise. Não houve remoção de valores extremos nem limpeza do cache de arquivos entre as execuções.
 
-\subsection{Concorrência, tempo e vazão}
+\subsection{Concorrência, Tempo e Vazão}
 
-Cada cliente é um processo em um nó distinto. O executor fornece uma mesma
-data futura no relógio monotônico, 150 ms à frente; os processos aguardam
-essa barreira antes de iniciar a conexão. O cliente C mede início e duração
-com CLOCK\_MONOTONIC. Os instantes são comparáveis porque os nós compartilham
-o kernel; o relógio de parede apenas identifica a coleta em UTC.
+Cada cliente foi executado como um processo independente em um nó do CORE. Para sincronizar as requisições, os processos utilizaram uma barreira baseada no relógio monotônico, com início programado 150 ms à frente.
 
-O tempo inclui conexão, comandos, negociação, corpo e conclusão local.
-PUT termina após receber a confirmação da publicação; GET, após fechar e
-publicar o destino local. Criação do processo, espera da barreira, geração
-dos dados e verificação SHA-256 ficam fora da medida. O executor aplica
-limite externo de 55 segundos ao cliente e watchdog de 60 segundos ao comando do nó.
+O tempo de resposta foi medido com \texttt{CLOCK\_MONOTONIC}, incluindo conexão, negociação, transferência e conclusão da operação. No PUT, a medição termina após a confirmação do servidor; no GET, após a gravação e publicação do arquivo local. A geração dos dados e a verificação SHA-256 ficaram fora da medição. Foram utilizados limites de execução de 55 segundos por cliente e 60 segundos por comando do nó.
 
-A vazão útil individual é $G=8B/(10^6T)$, em Mbps, com $B$ bytes de corpo
-e $T$ segundos. A vazão agregada divide a soma dos corpos pelo intervalo
-entre o primeiro início e a última conclusão da rodada. Ela não é a soma
-das vazões individuais quando as durações diferem.
+A vazão útil individual foi calculada por:
 
-\subsection{Integridade e retomada}
-
-Cada observação registra perfil, operação, concorrência, tamanho,
-repetição, cliente, tentativa, início, duração, vazão, bytes, status e hashes,
-além de desvio de início, sobreposição, duração da rodada e vazão agregada.
-GET compara o destino local à origem; PUT compara o arquivo publicado no
-servidor à origem do cliente. Na campanha, PUT usa um nome remoto por cliente,
-evitando que disputas de nomes se tornem um fator adicional.
-
-O CSV é sincronizado em disco antes do marcador de conclusão no journal.
-A análise só aceita uma tentativa confirmada com todos os clientes da
-rodada. A retomada foi testada após duas rodadas, sem duplicá-las, e uma
-execução posterior à conclusão informou que não havia rodadas pendentes.
-Esse teste pressupõe checkpoint íntegro; não simula queda de energia ou
-corrupção arbitrária. Falhas com status terminal seriam mantidas como falhas.
-
-\subsection{Tratamento estatístico}
-
-Clientes da mesma rodada compartilham enlace, filas e servidor.
-Por isso, a rodada é a unidade de repetição para estimar incerteza.
-Para tempo e vazão individual, calcula-se a média dos clientes em cada
-rodada e, então, o IC de 95\% entre as 11 médias:
 \begin{equation}
-	\bar{x}\;\pm\;t_{0{,}975;10}\frac{s_{\mathrm{rodadas}}}{\sqrt{11}}.
+	G = \frac{8B}{10^6 T}
+	\label{eq:vazao}
+\end{equation}
+
+\noindent em que $G$ representa a vazão em Mbps, $B$ o tamanho do arquivo em bytes e $T$ o tempo de resposta em segundos. A vazão agregada considera a soma dos bytes transferidos dividida pelo intervalo entre o início da primeira operação e a conclusão da última.
+
+\subsection{Integridade e Coleta de Dados}
+
+Para cada transferência, foram registrados perfil de rede, operação, tamanho do arquivo, concorrência, repetição, tempo de resposta, vazão, bytes transferidos, status e hashes de integridade.
+
+A integridade foi verificada utilizando SHA-256, comparando os arquivos de origem e destino. Nas operações PUT, cada cliente utilizou um nome remoto diferente para evitar conflitos de escrita.
+
+Os resultados foram armazenados em CSV, com um mecanismo de checkpoint para permitir a retomada dos experimentos sem duplicar rodadas. A retomada foi testada após duas execuções, e apenas rodadas completas e confirmadas foram consideradas na análise. O mecanismo não foi avaliado contra corrupção de arquivos ou falhas de energia.
+
+\subsection{Tratamento Estatístico}
+
+Como os clientes de uma mesma rodada compartilham os recursos da rede e do servidor, a rodada foi utilizada como unidade de repetição para estimar a incerteza das medições.
+
+Foram calculadas média, mediana e desvio padrão. Para o tempo de resposta e a vazão individual, calculou-se inicialmente a média dos clientes de cada rodada e, em seguida, o intervalo de confiança de 95\% entre as 11 médias, utilizando a distribuição t de Student:
+
+\begin{equation}
+	IC_{95\%} = \bar{x} \pm
+	t_{0{,}975;10}\frac{s}{\sqrt{11}}
 	\label{eq:intervalo}
 \end{equation}
-A vazão agregada tem uma observação por rodada. Mediana e desvio padrão
-entre clientes descrevem a distribuição individual; o CSV também contém
-o desvio entre médias de rodada. O IC da mediana usa bootstrap percentil
-com 3000 reamostragens de rodadas inteiras, preservando os clientes agrupados.
-As taxas usam todas as observações; desempenho considera sucessos.
-Os IC são marginais, sem correção para comparações múltiplas.
+
+\noindent em que $\bar{x}$ é a média das rodadas, $s$ o desvio padrão amostral entre elas e $t_{0{,}975;10}$ o valor crítico da distribuição t com 10 graus de liberdade.
+
+Para a mediana, foram utilizados intervalos de confiança obtidos por bootstrap com 3000 reamostragens de rodadas completas, preservando o agrupamento dos clientes. A vazão agregada foi analisada por rodada, e as taxas de sucesso consideraram todas as transferências.
 
 % ==========================================================
 % 5. RESULTADOS
 % ==========================================================
 
-\section{Resultados e análise estatística}
+\section{Resultados e Análise Estatística}
 \label{sec:resultados}
 
-A campanha principal ocorreu em 5 de novembro de 2026, entre 17:05:21 e
-17:22:04 UTC. Foram confirmadas as 528 rodadas e as 2288 transferências,
-com taxa empírica de sucesso de 100\% e de falha de 0\%. Todas as verificações
-SHA-256 corresponderam. As 48 configurações têm 11 repetições e nenhuma
-observação foi excluída por tentativa incompleta ou substituída.
+A campanha experimental foi realizada em 5 de novembro de 2026, entre 17:05 e 17:22 UTC. Foram concluídas 528 rodadas e 2288 transferências, todas com sucesso e integridade confirmada por SHA-256. Cada uma das 48 configurações teve 11 repetições, sem exclusão de observações.
 
-Todas as rodadas com múltiplos clientes tiveram interseção temporal
-positiva: a menor foi 33,313 ms, e o maior desvio entre inícios foi 2,038 ms.
-Esses registros, junto ao teste de oito READY, confirmam que os clientes não
-foram atendidos sequencialmente.
+Nas rodadas com múltiplos clientes, foi confirmada a sobreposição temporal das operações, com desvio máximo de 2,038 ms entre os inícios e sobreposição mínima de 33,313 ms. Esses resultados, juntamente com os testes de concorrência, confirmam o atendimento simultâneo das requisições.
 
-A Tabela~\ref{tab:tempos} apresenta os tempos para 4 MiB, incluindo média,
-mediana, DP individual e IC da média. A Figura~\ref{fig:tempo} reúne todos
-os tamanhos. As estatísticas completas das 48 configurações, inclusive
-IC das medianas e das vazões, permanecem no CSV resumido.
+A Tabela~\ref{tab:tempos} apresenta as estatísticas de tempo de resposta para arquivos de 4 MiB, enquanto a Figura~\ref{fig:tempo} mostra os tempos médios para todos os tamanhos. Os resultados completos, incluindo os intervalos de confiança, estão disponíveis nos arquivos CSV.
 
 \input{tabelas/tempos_4mib}
 
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{figuras/tempo_resposta.pdf}
-	\caption{Tempo médio de resposta por operação, perfil e concorrência.
-		As barras representam IC de 95\% calculados entre rodadas.}
+	\caption{Tempo médio de resposta por operação, perfil e concorrência, com IC de 95\% entre rodadas.}
 	\label{fig:tempo}
 \end{figure}
 
-As Figuras~\ref{fig:individual} e~\ref{fig:agregada} mostram a vazão útil
-individual e a agregada. Para 4 MiB e oito clientes, a agregada ficou próxima
-de 94 Mbps em A e 19 Mbps em B. Entre quatro e oito clientes, o ganho
-agregado variou aproximadamente de 1,4\% a 2,1\%, conforme a operação e o perfil.
+As Figuras~\ref{fig:individual} e~\ref{fig:agregada} apresentam, respectivamente, a vazão útil individual e a vazão agregada. Para arquivos de 4 MiB e oito clientes, a vazão agregada ficou próxima de 94 Mbps no perfil A e 19 Mbps no perfil B. Entre quatro e oito clientes, o ganho agregado foi de aproximadamente 1,4\% a 2,1\%, dependendo da operação e do perfil.
 
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{figuras/vazao_individual.pdf}
-	\caption{Vazão útil individual. O aumento da concorrência divide a
-		capacidade compartilhada; as barras representam IC de 95\% entre rodadas.}
+	\caption{Vazão útil individual por perfil e concorrência, com IC de 95\% entre rodadas.}
 	\label{fig:individual}
 \end{figure}
 
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{figuras/vazao_agregada.pdf}
-	\caption{Vazão agregada pelo intervalo completo da rodada, com IC de 95\%.
-		A escala de cada perfil acompanha seu limite de capacidade.}
+	\caption{Vazão agregada por rodada, com IC de 95\%.}
 	\label{fig:agregada}
 \end{figure}
 
-Para 32 KiB e um cliente, GET levou cerca de 0,033 s em A e 0,185 s em B;
-PUT levou 0,045 s e 0,245 s. A Tabela~\ref{tab:comparacoes} compara razões
-de médias em tamanhos e concorrências extremos. São comparações descritivas,
-sem intervalo específico ou teste de hipótese para essas razões.
+Para arquivos de 32 KiB e um cliente, o GET apresentou tempos próximos de 0,033 s no perfil A e 0,185 s no B. No PUT, os tempos foram de 0,045 s e 0,245 s, respectivamente. A Tabela~\ref{tab:comparacoes} apresenta comparações entre os cenários extremos de tamanho e concorrência.
 
 \input{tabelas/comparacoes}
 
-A Figura~\ref{fig:distribuicao} apresenta a dispersão individual em 4 MiB,
-e a Figura~\ref{fig:cdf} mostra a CDF empírica para um e oito clientes.
-Essas visualizações não supõem independência entre clientes da mesma rodada.
+Por fim, a Figura~\ref{fig:distribuicao} apresenta a distribuição dos tempos individuais para arquivos de 4 MiB, enquanto a Figura~\ref{fig:cdf} mostra a distribuição acumulada empírica (CDF) para um e oito clientes.
 
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{figuras/distribuicao.pdf}
-	\caption{Distribuição do tempo individual para 4 MiB. As caixas e os
-		pontos são descritivos; os marcadores triangulares indicam médias.}
+	\caption{Distribuição dos tempos individuais para arquivos de 4 MiB, com médias indicadas por triângulos.}
 	\label{fig:distribuicao}
 \end{figure}
 
 \begin{figure}[!htbp]
 	\centering
 	\includegraphics[width=\linewidth]{figuras/cdf.pdf}
-	\caption{CDF empírica do tempo para 4 MiB. $N$ indica clientes simultâneos;
-		as curvas comparam os perfis A/B e as concorrências extremas.}
+	\caption{CDF empírica dos tempos de resposta para arquivos de 4 MiB, comparando os perfis e níveis de concorrência.}
 	\label{fig:cdf}
 \end{figure}
 
+
 % ==========================================================
-% 6. DISCUSSÃO
+% 6. DISCUSSÃO DOS RESULTADOS
 % ==========================================================
 
-\section{Discussão dos resultados}
+\section{Discussão dos Resultados}
 \label{sec:discussao}
 
-O pequeno ganho agregado de quatro para oito clientes, acompanhado por
-aumento do tempo individual, é compatível com saturação do gargalo
-compartilhado. Em GET de 4 MiB, o tempo passou de aproximadamente 0,396 s
-para 2,602 s em A e de 2,024 s para 13,030 s em B. Em PUT, passou de 0,411 s
-para 2,543 s em A e de 2,102 s para 13,422 s em B. Apenas três níveis de
-concorrência não permitem localizar um ponto exato de saturação.
+Os resultados indicam que o aumento da concorrência eleva o tempo de resposta individual, enquanto a vazão agregada apresenta ganhos cada vez menores. Para arquivos de 4 MiB, o GET apresentou tempos entre aproximadamente 0,396 s e 2,602 s no perfil A, e entre 2,024 s e 13,030 s no perfil B. No PUT, os valores variaram de 0,411 s a 2,543 s em A e de 2,102 s a 13,422 s em B.
 
-PUT inclui a espera por READY e pela confirmação final; GET inclui o
-cabeçalho de resposta e a conclusão da gravação local. Essas diferenças
-ajudam a interpretar os objetos pequenos, mas não isolam causas. A direção
-da diferença entre GET e PUT muda em algumas configurações; não se pode
-concluir que uma operação é sempre mais rápida.
+Esse comportamento é compatível com a saturação do enlace de gargalo, já que sua capacidade passa a ser compartilhada entre mais clientes. Entretanto, os três níveis de concorrência avaliados não permitem determinar um ponto exato de saturação.
 
-B combina taxa cinco vezes menor e RTT nominal seis vezes maior.
-Assim, diferenças A/B descrevem o perfil completo, sem separar o efeito
-de taxa e latência. Objetos grandes sustentam maior uso do gargalo, enquanto
-os menores são mais sensíveis aos custos fixos das fases de comunicação.
-Isolar cada fator exigiria outra matriz, variando somente um deles por vez.
+As diferenças entre GET e PUT também dependem das etapas de cada operação. O PUT aguarda a autorização para envio e a confirmação final, enquanto o GET recebe o cabeçalho e realiza a gravação local. Essas diferenças são mais perceptíveis em arquivos pequenos, mas os resultados não permitem afirmar que uma operação seja sempre mais rápida.
+
+O perfil B apresentou tempos maiores devido à combinação de menor vazão e maior latência. Como esses dois parâmetros foram alterados simultaneamente, não é possível determinar isoladamente a contribuição de cada um. Em arquivos maiores, a capacidade do enlace exerce maior influência, enquanto arquivos pequenos são mais sensíveis aos custos fixos de comunicação.
 
 \subsection{Limitações}
 
-Os nós compartilham um host WSL/Docker, sem reserva de CPU ou controle de
-disco frio. A Ethernet virtual usa atraso fixo, sem jitter ou perda
-artificial, e a fila de 10000 pacotes não modela um equipamento residencial
-específico. Os snapshots não incluem acompanhamento contínuo de pacotes,
-CPU e disco por rodada; portanto, não identificam a causa de cada observação extrema.
+Os experimentos foram realizados em um ambiente CORE sobre WSL2 e Docker, no qual os nós compartilham os recursos da máquina hospedeira. Além disso, os perfis utilizaram atrasos fixos, sem introdução de jitter ou perda artificial de pacotes.
 
-Não foram avaliados TLS, autenticação, longa duração ou durabilidade após
-queda de energia. Onze rodadas oferecem uma estimativa limitada de
-variabilidade, com possível dependência temporal residual. Zero falhas
-observadas não significa probabilidade de falha nula fora da amostra.
+Não foram monitorados continuamente o uso de CPU, disco e filas durante cada rodada, o que limita a identificação das causas de variações individuais. Também não foram avaliados TLS, autenticação ou a durabilidade dos arquivos após falhas de energia.
+
+Por fim, as 11 repetições por configuração permitem estimar a variabilidade observada, mas não eliminam possíveis efeitos temporais. A ausência de falhas na campanha também não garante que o sistema esteja livre de erros em outras condições.
+
 
 % ==========================================================
 % 7. CONCLUSÕES
@@ -379,22 +256,21 @@ observadas não significa probabilidade de falha nula fora da amostra.
 \section{Conclusões}
 \label{sec:conclusoes}
 
-Os testes verificaram GET/PUT binários e vazios, sobrescrita, preservação
-de versões após falhas e oito atendimentos simultâneos. A campanha no CORE
-concluiu 528 rodadas e 2288 transferências com integridade confirmada.
+O trabalho apresentou a implementação de uma aplicação cliente-servidor TCP em C, com operações GET e PUT e atendimento concorrente utilizando OpenMP. Os testes verificaram a transferência de arquivos binários, sobrescrita, tratamento de erros e atendimento simultâneo de até oito clientes.
 
-Para objetos grandes, aumentar a concorrência de quatro para oito clientes
-elevou o tempo individual com pouco ganho agregado. A análise usa rodadas
-para estimar incerteza. Fontes, dados e evidências estão organizados para
-reprodução, conforme as instruções dos READMEs.
+Na avaliação realizada com o CORE, foram concluídas 528 rodadas e 2288 transferências, todas com integridade confirmada. Os resultados mostraram que o aumento da concorrência pode elevar significativamente o tempo de resposta individual, enquanto a vazão agregada se aproxima da capacidade do enlace de gargalo.
 
-% Transparência sobre as ferramentas de apoio utilizadas.
-\section*{Nota sobre o uso de inteligência artificial}
+Os códigos, dados experimentais e arquivos de configuração foram organizados no repositório do projeto, permitindo a reprodução dos testes e das análises realizadas.
 
-Foi utilizada inteligência artificial (IA) para auxiliar na geração de
-alguns arquivos de automação, como Makefiles e scripts \texttt{.sh}.
-A IA também foi utilizada no preenchimento automático de código
-(\textit{autocomplete}) e na execução de testes de grande volume no sistema.
+
+% ==========================================================
+% NOTA SOBRE O USO DE IA
+% ==========================================================
+
+\section*{Nota sobre o Uso de Inteligência Artificial}
+
+Foram utilizadas ferramentas de inteligência artificial (IA) como apoio ao desenvolvimento do trabalho, principalmente na geração de scripts de automação, Makefiles e arquivos \texttt{.sh}, no preenchimento automático de código (\textit{autocomplete}) e na execução de testes em grande escala. Também foram utilizadas para auxiliar na revisão ortográfica e gramatical do relatório, buscando melhorar a clareza e a organização do texto.
+
 
 \bibliographystyle{sbc}
 \bibliography{referencias}

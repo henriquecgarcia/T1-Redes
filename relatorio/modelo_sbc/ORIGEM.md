@@ -16,8 +16,11 @@ Os arquivos foram obtidos da distribuição do SBGames, evento da SBC:
 - https://www.sbgames.org/arquivos/Template_SBC/template-latex/sbc-template.sty
 - https://www.sbgames.org/arquivos/Template_SBC/template-latex/sbc.bst
 
-`sbc-template.sty` e `sbc.bst` não foram editados ou reformatados.
-Seus hashes estão em `SHA256SUMS`.
+`sbc-template.sty` permanece igual ao arquivo obtido. O arquivo `sbc.bst`
+foi ajustado depois para produzir rótulos de citação no formato `(Autor, Ano)`
+e conservar anos como `s.d.`. `SHA256SUMS` registra os hashes dos dois arquivos
+originais; por isso, o hash ali registrado para `sbc.bst` não corresponde à
+versão ajustada utilizada na compilação.
 O template no Overleaf é atribuído à Sociedade Brasileira de Computação e
 indica licença CC BY 4.0. Os avisos de autoria dos arquivos foram preservados.
 

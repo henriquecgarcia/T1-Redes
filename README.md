@@ -108,7 +108,8 @@ O código usado na medição e os logs históricos também foram preservados em
 arquivos compactados, com verificação de conteúdo. Os CSV, timestamps, hashes
 e gráficos originais não foram alterados na revisão.
 
-O código ativo usa TABs reais para indentação. O estilo SBC e os registros
-experimentais mantêm os bytes originais; não são reformatados.
+O código ativo usa TABs reais para indentação. O pacote `sbc-template.sty` e
+os registros experimentais mantêm os bytes originais. O arquivo `sbc.bst`
+recebeu um ajuste pontual para formatar as citações autor-ano.
 Os limites do ambiente compartilhado e da metodologia estão no artigo.
 A Parte 3, referente ao vídeo, permanece fora do escopo.
