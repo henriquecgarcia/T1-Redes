@@ -153,7 +153,7 @@ encerra a conexão. GET/PUT malformados recebem ERR; outros textos recebem echo 
 comprometer o enquadramento, a conexão é encerrada. O cliente automatizado executa uma operação por
 processo e recebe IPv4, porta, operação, nome remoto e caminho local.
 
-\passthrough{\lstinline!send\_all!} e \passthrough{\lstinline!recv\_exact!} repetem operações
+\noindent\passthrough{\lstinline!send\_all!} e \passthrough{\lstinline!recv\_exact!} repetem operações
 parciais e EINTR. \passthrough{\lstinline!MSG\_NOSIGNAL!} evita terminar o processo por SIGPIPE. A
 leitura da linha não consome os bytes seguintes do arquivo. GET transmite somente o tamanho
 anunciado. Resultados de leitura, escrita e fechamento são verificados. GET rejeita symlinks e
@@ -232,7 +232,7 @@ recuperados diretamente desse diretório. O executor original usado nas mediçõ
 
 \begin{figure}
 \centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{../parte2/graficos/topologia.pdf}
+\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/topologia.pdf}
 \caption{Topologia real com duas redes de acesso, núcleo, dois roteadores e oito clientes.}
 \end{figure}
 
@@ -420,20 +420,20 @@ B & PUT & 8 & 13.422 & 13.333 a 13.510 & 2.509 & 18.869\tabularnewline
 
 \begin{figure}
 \centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{../parte2/graficos/duration_s.pdf}
+\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/tempo_resposta.pdf}
 \caption{Tempo de resposta por perfil, operação, tamanho e concorrência, com IC de 95\% entre
 rodadas.}
 \end{figure}
 
 \begin{figure}
 \centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{../parte2/graficos/throughput_mbps.pdf}
+\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/vazao_individual.pdf}
 \caption{Vazão útil individual, com IC de 95\% entre rodadas.}
 \end{figure}
 
 \begin{figure}
 \centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{../parte2/graficos/aggregate_mbps.pdf}
+\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/vazao_agregada.pdf}
 \caption{Vazão agregada pelo intervalo completo da rodada.}
 \end{figure}
 
@@ -462,14 +462,14 @@ clientes de uma rodada.
 
 \begin{figure}
 \centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{../parte2/graficos/distribuicao.pdf}
+\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/distribuicao.pdf}
 \caption{Distribuição do tempo individual para 4 MiB; caixas, médias e pontos extremos são
 descritivos.}
 \end{figure}
 
 \begin{figure}
 \centering
-\includegraphics[width=0.98\textwidth,keepaspectratio]{../parte2/graficos/cdf.pdf}
+\includegraphics[width=0.98\textwidth,keepaspectratio]{figuras/cdf.pdf}
 \caption{CDF empírica para 4 MiB, comparando perfis e concorrências extremas.}
 \end{figure}
 
