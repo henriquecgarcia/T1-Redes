@@ -7,3 +7,5 @@ Os PDFs foram apenas movidos para esta pasta; seu conteúdo não foi alterado.
 O guia declara que não é documentação oficial do CORE.
 O relatório segue o modelo SBC por orientação do usuário. A Parte 3 do enunciado
 (vídeo-relatório) permanece fora do escopo desta execução.
+
+Vídeo-relatório: https://youtu.be/A4eat_TT90k
